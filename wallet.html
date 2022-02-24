@@ -1,6 +1,6 @@
 <!DOCTYPE html><html>	
 <head>
-	<title>Crypto Wallet</title>	
+	<title>Transact</title>	
 	<link rel="stylesheet" type="text/css" href="wallet.css">
 	<link rel="icon" href="strawicontrans.png">	
 	<link rel="manifest" href="manifest.json">
@@ -1046,13 +1046,13 @@ function setupWebsocket() {
 //////////////////////////////////////////////////////// Final display setup
 
 function makePaymentURL(preferred, addresses, items) {
-    const url = new URL('https://warashibetrader.github.io/crypto/wallet');
+    const url = new URL('https://transactcc.github.io/');
     url.search = new URLSearchParams({preferred:preferred, addresses:encodeURIComponent(JSON.stringify(addresses)), items:encodeURIComponent(JSON.stringify(items))});
     return url;
 }
 
 function startPayment(preferred, addresses, items, processTransaction) {	
-	let popup = window.open('https://warashibetrader.github.io/crypto/wallet');
+	let popup = window.open('https://transactcc.github.io/');
 	window.addEventListener("message", function(event) { 
 		if (event.source == popup && event.data) {
 			if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred:preferred, addresses: addresses, items: items}); 
