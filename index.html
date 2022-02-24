@@ -129,6 +129,7 @@ if (localStorage.getItem('symbol')) document.getElementById('firstDiv').style.ba
 
 //////////////////////////////////////////////////////// global data
 
+var thisURL = 'https://transactcc.github.io/';
 var paymentWindow = false;
 var fullView = localStorage.getItem("view");
 if (fullView) D('view').classList.add('active');
@@ -1047,13 +1048,13 @@ function setupWebsocket() {
 //////////////////////////////////////////////////////// Final display setup
 
 function makePaymentURL(preferred, addresses, items) {
-    const url = new URL('https://transactcc.github.io/');
+    const url = new URL(thisURL);
     url.search = new URLSearchParams({preferred:preferred, addresses:encodeURIComponent(JSON.stringify(addresses)), items:encodeURIComponent(JSON.stringify(items))});
     return url;
 }
 
 function startPayment(preferred, addresses, items, processTransaction) {	
-	let popup = window.open('https://transactcc.github.io/');
+	let popup = window.open(thisURL);
 	window.addEventListener("message", function(event) { 
 		if (event.source == popup && event.data) {
 			if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred:preferred, addresses: addresses, items: items}); 
