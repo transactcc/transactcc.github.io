@@ -1269,8 +1269,10 @@ function displayName(symbol, divString, address, displayString) {
 		} else if (address == ccc[symbol].address) displayString = "(me)";
 		else displayString = "Unknown";
 	} else if (divString != "-display" && address == ccc[symbol].address) displayString += " (me)";
-	flash(D(symbol + divString), displayString);
-	if (D(symbol + "-transactions").contains(D(symbol + divString))) filterLi(D(symbol + divString).parentNode.parentNode.parentNode, D(symbol + "-filter").value.toLowerCase(), symbol);
+	if (D(symbol + divString)) {
+		flash(D(symbol + divString), displayString);
+		if (D(symbol + "-transactions").contains(D(symbol + divString))) filterLi(D(symbol + divString).parentNode.parentNode.parentNode, D(symbol + "-filter").value.toLowerCase(), symbol);
+	}
 }
 
 //////////////////////////////////////////////////////// Interface with helper functions
