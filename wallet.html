@@ -1,0 +1,2431 @@
+<!DOCTYPE html><html>	
+<head>
+	<title>Crypto Wallet</title>	
+	<link rel="stylesheet" type="text/css" href="wallet.css">
+	<link rel="icon" href="strawicontrans.png">	
+	<link rel="manifest" href="manifest.json">
+	<link rel="apple-touch-icon" href="strawicontrans.png">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">	
+	<meta name="theme-color" content="#fff">	
+	<meta name="description" content="A multi-asset cryptocurrency wallet (Nano, Banano, Solana, Stellar, and Algorand), integrated with a complete humanizing layer featuring a public directory of addresses, receipts, and invoices. Designed as a single page application emphasizing security, speed, and simplicity. Supports Progressive Web App (PWA) installation.">	
+	
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+	<meta content="utf-8" http-equiv="encoding">
+	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+	<meta http-equiv="Pragma" content="no-cache">
+	<meta http-equiv="Expires" content="0">
+</head>
+	
+<body>
+	<audio id="audio"><source src="https://streams.kqed.org/kqedradio.mp3" type="audio/mpeg"/></audio>
+	<strong id="msg" style="display:none; padding:5px; z-index:4; box-shadow:#ccc 2px 2px 2px; background-color:#fff;
+							  position:fixed; left:0px; top:0px; border-radius:5px; pointer-events:none; filter:opacity(0.9);"></strong>
+	<div class="containerdiv">
+	<div id="firstDiv" class="firstDiv">				
+		<div id="quoteDisplay" style="display:none; margin-bottom:15px;">
+			<img src=""  onclick="toggleQuote();" id="preview" style="cursor:pointer; display:none; margin-left:auto; margin-right:auto; max-width:100%; max-height:200px; border-radius:15px">
+			<div id="quote" style="cursor:pointer; white-space:pre-wrap; font-style:italic; font-size:0.9em" onclick="toggleQuote();"></div>
+			
+			<input type="file" style="display:none" id="filetag" accept="image/*">		
+			<div id="advancedQuote" class="accordion" style="display:flex; align-items:center; position:relative; max-height:0px;">
+				<div style="margin:auto">
+				<button id="imageButton" style="font-size:0.8em;" onclick="toggleImage()">Select Security Image</button>
+				<button id="wipeButton" style="font-size:0.8em;" onclick="toggleWipe()">Clear Keys on Updates</button>
+				</div>
+				<span style="position:absolute; right:0px">(<a rel="noopener" href="https://warashibetrader.github.io/2022/02/02/security-quote-protocol" target="_blank">?</a>)</span>
+			</div>
+		</div>
+		
+		<div class="objectWrapper" style="display:none">
+			<div id="serverMsg" style="white-space:pre-wrap; color:red; font-style:italic; font-size:0.9em" ></div>
+			<div id="serverMsgButton" style="display:none; text-align:center; margin-top:10px; margin-bottom:15px; font-size:0.8em"><button onclick="hideServerMsg()">Hide Message</button></div>
+		</div>
+		
+		<div style="display:flex; align-items:center; position:relative; margin-left:18px; margin-right:18px; margin-top:5px; margin-bottom:10px">	
+			<select name="primary" id="primary" onchange="selectPrimary(event.target.value)">
+				<option value="XNO">Nano (XNO)</option>
+				<option value="BAN">Banano (BAN)</option>
+				<option value="SOL">Solana (SOL)</option>
+				<option value="XLM">Stellar (XLM)</option>
+				<option value="ALGO">Algorand (ALGO)</option>
+			</select>	
+			<div style="position:absolute; right:0px">		
+				<button id="view" style="font-size:0.8em;" onclick="toggleView()" disabled>All Tools</button>
+				<button id="account" style="font-size:0.8em" onclick="toggleAccount()">Account</button>
+			</div>
+		</div>		
+		
+		<div id="donatePanel" style="text-align:center; margin-bottom:25px; margin-top:auto; width:100%">
+			<button id="nprButton" style="font-size:0.8em" onclick="npr()">NPR</button>	
+			<button id="donateButton" style="font-size:0.8em;" onclick="donate()" disabled>Support the Developer</button>
+		</div>
+	</div>
+	<div id="secondDiv" class="secondDiv">
+	</div>
+	</div>
+</body>	
+
+<script>
+'use strict';
+
+//////////////////////////////////////////////////////// security quote setup
+
+var wipeKeys = localStorage.getItem("wipe");
+if (wipeKeys) D("wipeButton").classList.add('active');
+var localStorageWriteable = true;
+if ('serviceWorker' in navigator) {
+	navigator.serviceWorker.register('service-worker.js').then((reg) => {
+		console.log('Service worker registered.', reg);
+
+		reg.addEventListener('updatefound', () => {
+			// An updated service worker has appeared in reg.installing!
+			localStorageWriteable = false;
+			
+			if (localStorage.getItem("quote")) {
+				showMsg("Update found. Deleting security quote...");
+				D('msg').style.backgroundColor = "#FFB6C1";	
+				
+				localStorage.removeItem("quote");
+				localStorage.removeItem("image");
+				if (wipeKeys) localStorage.clear();
+				D('quote').textContent = "";
+				D('preview').src = "";
+				
+				showMsg("Installing update... Security quote deleted. Clearing DOM...");
+				
+				if (ccc) {
+					for (let symbol in ccc) {
+						ccc[symbol].privateKey = "";						
+						if (D(`${symbol}-seed`)) D(`${symbol}-seed`).value = "";
+						ccc[symbol].sidebarElt.innerHTML = "";
+						console.log("Deleted " + symbol + "key.");
+					}
+				}				
+				
+				showMsg("Installing update... Security quote deleted.");
+				let newWorker = reg.installing;
+				newWorker.addEventListener('statechange', () => {		
+					if (newWorker.state == 'activated') showMsg("Update installed. Security quote deleted.");
+				});
+			}
+		});
+	});
+}
+
+function D(string) { return document.getElementById(string); }
+let quickColorArray = {XNO:'steelblue', BAN:'orange', SOL:'#0ca', XLM:'#373b82', ALGO:'#b72375' };
+if (localStorage.getItem('symbol')) document.getElementById('firstDiv').style.backgroundColor = quickColorArray[localStorage.getItem('symbol')];	
+</script>
+	
+<script src="quotes.js"></script>
+<script src="qrcode.js"></script>
+<script src="qrscan.js"></script>
+<script src="nacl.js"></script>
+
+<script>
+'use strict';
+
+//////////////////////////////////////////////////////// global data
+
+var paymentWindow = false;
+var fullView = localStorage.getItem("view");
+if (fullView) D('view').classList.add('active');
+let imgsrc = localStorage.getItem("image");
+if (imgsrc) {
+	D('preview').src = imgsrc;
+	D('preview').style.display = "block";
+	D('quote').style.display = "none";
+	D("imageButton").classList.add('active');
+	D("imageButton").textContent = "Clear Security Image";
+}
+
+var changeNameFlag = false;
+var nameCache = {};
+var backupCache = {};
+
+const video = document.createElement("video");
+var qrScanning = false;
+var qrScanningSymbol = D('primary').value;
+var qrScanningType = "";	
+
+var clipboardText;
+
+//////////////////////////////////////////////////////// crypto currency classes
+
+var ccc = {};
+ccc['XNO'] = {shift:30, flashColor:'#def', keyType:'seed', min:0, fee:0, donation:'nano_1gpquwssoy8491ajmxp9cxjb3o38imcxidissob7cxc38o6h6r4d8gg639b7',
+				server:'https://proxy.powernode.cc/proxy',				
+				gettingStarted:'https://nanolinks.info/',
+				
+					faucet: 'https://nanodrop.io/',
+					representative:'nano_1natrium1o3z5519ifou7xii8crpxpk8y65qmkih8e8bpsjri651oza8imdd',
+					repRec:'https://mynano.ninja/api/accounts/verified'};
+						
+ccc['BAN'] = {shift:29, flashColor:'#ffc', keyType:'seed', min:0, fee:0, donation:'ban_1gpquwssoy8491ajmxp9cxjb3o38imcxidissob7cxc38o6h6r4d8gg639b7',
+				server:'https://kaliumapi.appditto.com/api',				
+				gettingStarted:'https://banano.how/links/',
+				
+					faucet: 'https://monkeytalks.cc/',
+					representative:'ban_1ka1ium4pfue3uxtntqsrib8mumxgazsjf58gidh1xeo5te3whsq8z476goo',
+					repRec:'https://api.spyglass.pw/banano/v1/representatives/scores'};
+						
+ccc['SOL'] = {shift:9, flashColor:'#e0faf0', keyType:'private key', min:0, fee:5000, donation:'9uugZyizr3QCrTcCgDGHpYwik636GGJVQTYBFRtd2rvG',
+				server: 'mainnet-beta',	// devnet
+				gettingStarted:'https://solana.com/',
+					
+					faucet: 'https://solfaucet.togatech.org/'};
+				
+ccc['XLM'] = {shift:7, flashColor:'#edf', keyType:'private key', min:1, fee: 100, donation:'GCOYMN3XAUD4OM4OTNC536TG6MEB6TK3IGSPKDJJJ7V36S3NNGKVBLTC',
+				server: "https://horizon.stellar.org/", //https://horizon-testnet.stellar.org				
+				gettingStarted:'https://www.stellar.org',
+				
+					passphrase: "Public Global Stellar Network ; September 2015"}; // "Public Global Stellar Network ; September 2015" "Test SDF Network ; September 2015"
+					
+ccc['ALGO'] = {shift:6, flashColor:'#ebd', keyType:'private key', min:0.1, fee: 1000, donation:'EWB5J4POIJXWGOFS54HY7BGJ3MQW4HMJGQOKNECE7WANYNSKZS25E3G3NA',
+				server: 'https://algoindexer.algoexplorerapi.io/v2/',		 // 'https://algoindexer.testnet.algoexplorerapi.io/v2/'		
+				gettingStarted:'https://www.algorand.com/',
+				
+					faucet: 'https://thealgofaucet.com/',
+					sendServer: 'https://node.algoexplorerapi.io/'}; // 'https://node.testnet.algoexplorerapi.io/'
+	
+for (let symbol in ccc) { 
+	ccc[symbol].queue = new Promise(function(resolve, reject) { resolve(true); });
+	ccc[symbol].bgColor = quickColorArray[symbol];
+}
+
+//////////////////////////////////////////////////////// low level helper functions
+
+ccc['XNO'].generateSeed = function() {
+	const seed = new Uint8Array(32);
+	crypto.getRandomValues(seed);
+	return Array.prototype.map.call(seed, (x) => ('00' + x.toString(16)).slice(-2)).join('').toUpperCase();
+};
+ccc['BAN'].generateSeed = function() { return ccc['XNO'].generateSeed(); };
+ccc['SOL'].generateSeed = function() { return "[" + solanaWeb3.Keypair.generate().secretKey.toString() + "]"; };
+ccc['XLM'].generateSeed = function() { return StellarSdk.Keypair.random().secret(); };
+ccc['ALGO'].generateSeed = function() { return algosdk.secretKeyToMnemonic(algosdk.generateAccount().sk); };
+
+ccc['BAN'].checkSeed = function(seed) { return typeof seed === "string" && /^[0-9a-fA-F]{64}$/.test(seed);};
+ccc['XNO'].checkSeed = function(seed) {	return typeof seed === "string" && /^[0-9a-fA-F]{64}$/.test(seed);};
+ccc['SOL'].checkSeed = function(seed) {	
+	let arrSeed = seed.split(',');
+	for (let i = 0; i < arrSeed.length; i++) {
+		arrSeed[i] = parseInt(arrSeed[i].replace(/\D/g,''));
+		if (!(arrSeed[i] <= 255 && arrSeed[i] >= 0)) return false;
+	}
+	if (arrSeed.length != 64) return false;
+	
+	try { solanaWeb3.Keypair.fromSecretKey(new Uint8Array(arrSeed)); }
+	catch { return false; }
+	return true;
+};
+ccc['XLM'].checkSeed = function(seed) { return StellarSdk.StrKey.isValidEd25519SecretSeed(seed); };
+ccc['ALGO'].checkSeed = function(seed) { 
+	try { algosdk.mnemonicToSecretKey(seed); }
+	catch { return false; }
+	return true;
+};
+
+ccc['XNO'].checkAddress = function(address) { 
+	if (!(typeof address === "string") || !/^(xrb_|nano_)[13][13-9a-km-uw-z]{59}$/.test(address)) return false;
+	let prefixLength = 5;
+	if (address.startsWith('xrb_')) prefixLength = 4;
+
+	const publicKeyBytes = decodeNanoBase32(address.substr(prefixLength, 52));
+	const checksumBytes = decodeNanoBase32(address.substr(prefixLength + 52));
+	const computedChecksumBytes = blake2b(publicKeyBytes, null, 5).reverse();
+	for (let i = 0; i < checksumBytes.length; i++) {
+		if (checksumBytes[i] !== computedChecksumBytes[i]) return false;
+	}
+	return true;
+};
+ccc['BAN'].checkAddress = function(address) { 
+	let nanoAddr = address.replace('ban_', 'nano_');
+	return (nanoAddr != address) && ccc['XNO'].checkAddress(nanoAddr);
+};
+ccc['SOL'].checkAddress = function(address) { return typeof address === "string" && /^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(address); };
+ccc['XLM'].checkAddress = function(address) { return StellarSdk.StrKey.isValidEd25519PublicKey(address); };
+ccc['ALGO'].checkAddress = function(address) { return algosdk.isValidAddress(address); };
+
+ccc['BAN'].addressFromSeed = function(seed) {
+	let privateKey = ccc['BAN'].derivePrivateKey(seed, 0);
+	let publicKey = ccc['BAN'].derivePublicKey(privateKey);
+	return ccc['BAN'].deriveAddress(publicKey);	
+}
+ccc['XNO'].addressFromSeed = function(seed) {
+	let privateKey = ccc['XNO'].derivePrivateKey(seed, 0);
+	let publicKey = ccc['XNO'].derivePublicKey(privateKey);
+	return ccc['XNO'].deriveAddress(publicKey);	
+}
+ccc['SOL'].addressFromSeed = function(seed) {
+	let arrSeed = seed.split(',');
+	for (let i = 0; i < arrSeed.length; i++) {
+		arrSeed[i] = parseInt(arrSeed[i].replace(/\D/g,''));
+	}
+	return solanaWeb3.Keypair.fromSecretKey(new Uint8Array(arrSeed)).publicKey.toBase58()
+}
+ccc['XLM'].addressFromSeed = function(seed) { return StellarSdk.Keypair.fromSecret(seed).publicKey(); };
+ccc['ALGO'].addressFromSeed = function(seed) { return algosdk.mnemonicToSecretKey(seed).addr; };
+
+ccc['XNO'].derivePrivateKey = function(seed, index) {
+  const indexBuffer = new ArrayBuffer(4)
+  const indexView = new DataView(indexBuffer)
+  indexView.setUint32(0, index)
+  const indexBytes = new Uint8Array(indexBuffer)
+
+  const context = blake2bInit(32)
+  blake2bUpdate(context, hexToByteArray(seed))
+  blake2bUpdate(context, indexBytes)
+  return byteArrayToHex(blake2bFinal(context))
+}
+ccc['BAN'].derivePrivateKey = ccc['XNO'].derivePrivateKey;
+
+ccc['XNO'].derivePublicKey = function(secretKeyOrAddress) {
+	let publicKeyBytes;
+	if (!ccc['XNO'].checkAddress(secretKeyOrAddress)) publicKeyBytes = derivePublicFromSecret(hexToByteArray(secretKeyOrAddress));
+	else publicKeyBytes = decodeNanoBase32(secretKeyOrAddress.substr(5, 52));
+	return byteArrayToHex(publicKeyBytes);
+}
+ccc['BAN'].derivePublicKey = ccc['XNO'].derivePublicKey;
+
+ccc['XNO'].deriveAddress = function(publicKey) {
+  const checksum = blake2b(hexToByteArray(publicKey), null, 5).reverse();
+  return 'nano_' + encodeNanoBase32(hexToByteArray(publicKey)) + encodeNanoBase32(checksum);
+}
+ccc['BAN'].deriveAddress = function(publicKey) { return ccc['XNO'].deriveAddress(publicKey).replace('nano_', 'ban_'); };
+
+ccc['BAN'].unpackSeed = function(seed, index) {
+	ccc['BAN'].privateKey = ccc['BAN'].derivePrivateKey(seed, index);
+	ccc['BAN'].publicKey = ccc['BAN'].derivePublicKey(ccc['BAN'].privateKey);
+	ccc['BAN'].address = ccc['BAN'].deriveAddress(ccc['BAN'].publicKey);	
+	ccc['BAN'].index = parseInt(index);
+};
+ccc['XNO'].unpackSeed = function(seed, index) {
+	ccc['XNO'].privateKey = ccc['XNO'].derivePrivateKey(seed, index);
+	ccc['XNO'].publicKey = ccc['XNO'].derivePublicKey(ccc['XNO'].privateKey);
+	ccc['XNO'].address = ccc['XNO'].deriveAddress(ccc['XNO'].publicKey);
+	ccc['XNO'].index = parseInt(index);
+}
+ccc['SOL'].unpackSeed = function(seed) {
+	let arrSeed = seed.split(',');
+	for (let i = 0; i < arrSeed.length; i++) {
+		arrSeed[i] = parseInt(arrSeed[i].replace(/\D/g,''));
+	}
+	ccc['SOL'].privateKey = solanaWeb3.Keypair.fromSecretKey(new Uint8Array(arrSeed));
+	ccc['SOL'].publicKey = ccc['SOL'].privateKey.publicKey;
+	ccc['SOL'].address = ccc['SOL'].publicKey.toBase58();
+}
+ccc['XLM'].unpackSeed = function(seed) {
+	ccc['XLM'].privateKey = seed;
+	ccc['XLM'].publicKey = StellarSdk.Keypair.fromSecret(seed).publicKey();
+	ccc['XLM'].address = ccc['XLM'].publicKey;
+}
+ccc['ALGO'].unpackSeed = function(seed) {
+	let unpack = algosdk.mnemonicToSecretKey(seed);
+	ccc['ALGO'].privateKey = unpack.sk;
+	ccc['ALGO'].publicKey = unpack.addr;
+	ccc['ALGO'].address = unpack.addr;
+}
+
+//////////////////////////////////////////////////////// information fetch helper functions
+
+ccc['XNO'].getAccountInfo = function() { return nanoGetAccountInfo('XNO'); };
+ccc['BAN'].getAccountInfo = function() { return nanoGetAccountInfo('BAN'); };
+function nanoGetAccountInfo(symbol) {
+	return post(ccc[symbol].server, {action: 'account_info', pending: true, representative: true, account: ccc[symbol].address}).then(function(accountInfo) {
+		if (accountInfo && !accountInfo.frontier) {
+			accountInfo.balance = "0";
+			accountInfo.detail = "Unopened account.";
+		} 
+		return accountInfo;
+	});
+}
+ccc['SOL'].getAccountInfo = function() {
+	return ccc['SOL'].server.getAccountInfo(ccc['SOL'].publicKey).then(function(accountInfo) {
+		if (accountInfo) accountInfo.balance = accountInfo.lamports;
+		else accountInfo = {detail: "Unopened account.", balance: "0"};
+		return accountInfo;
+	}).catch(function() { networkFailMsg(); });
+};
+ccc['XLM'].getAccountInfo = function() {
+	return ccc['XLM'].server.loadAccount(ccc['XLM'].publicKey).then(function(accountInfo) {
+		accountInfo.balance = rawFromUnit('XLM', accountInfo.balances[0].balance);
+		return accountInfo;
+	}).catch(function(error) {
+		if (error instanceof StellarSdk.NotFoundError) return {detail: "Unopened account.", balance: "0"};
+		else return networkFailMsg();
+	});
+};
+ccc['ALGO'].getAccountInfo = function() {
+	return fetch(ccc['ALGO'].server + "accounts/" + ccc['ALGO'].address + "?include-all=true").then(function(response) { 
+	return response.json().then(function(data) { 
+		if (data.account) {
+			data.account.balance = data.account.amount;
+			return data.account;
+		} else return {detail: "Unopened account.", balance: "0"};
+	});}).catch(function() { return networkFailMsg(); });
+};
+
+ccc['BAN'].getTransactions = function(start) {nanoDisplayTransactions('BAN', start);};
+ccc['XNO'].getTransactions = function(start) {nanoDisplayTransactions('XNO', start);};
+function nanoDisplayTransactions(symbol, start) {
+	post(ccc[symbol].server, { action: 'account_history', head:start, account: ccc[symbol].address, count:10 }).then(function(history) {
+	if (D(symbol + '-loadMore') && history && history.history) {
+		handlePage(symbol, history.previous, history.history[history.history.length - 1].height, history.previous);
+		for (let i = 0; i < history.history.length; i++) {
+			if (!D(symbol + '-' + history.history[i].height)) {
+				displayTransaction(symbol, history.history[i].height, (history.history[i].type == "send"), history.history[i].account, history.history[i].local_timestamp * 1000, history.history[i].amount, history.history[i].hash);
+			}
+		}
+	}
+	});
+}
+	
+ccc['SOL'].getTransactions = function(start) {
+	let symbol = 'SOL';
+	return ccc[symbol].server.getSignaturesForAddress(ccc[symbol].publicKey, {limit:10, before: start}).then(async function(history) {
+	if (D(symbol + '-loadMore') && history && history.length > 0) {
+		handlePage(symbol, history.length > 9, history[history.length - 1].slot, history[history.length - 1].signature);
+		let details = [];
+		for (let i = 0; i < history.length; i++) {
+			if (!D(symbol + '-' + history[i].slot)) {
+				displayTransaction(symbol, history[i].slot, true, history[i].signature, history[i].blockTime * 1000, "0", history[i].signature);				
+				details[i] = history[i].signature;  
+			}
+		}
+		if (details.length > 0) {
+			let historyDetails = await ccc[symbol].server.getParsedConfirmedTransactions(details);
+			if (historyDetails.length > 0) {
+			console.log(historyDetails);
+				for (let i = 0; i < historyDetails.length; i++) {
+					if (D(symbol + '-' + historyDetails[i].slot)) {
+						let li = D(symbol + '-' + historyDetails[i].slot).parentNode.parentNode.parentNode;
+						for (let j = 0; j < historyDetails[i].transaction.message.accountKeys.length; j++) {
+							if (historyDetails[i].transaction.message.accountKeys[j].pubkey.toBase58() == ccc[symbol].address) {
+								let change = historyDetails[i].meta.postBalances[j] - historyDetails[i].meta.preBalances[j];
+								let amtDisplay = li.children[0].children[1];								
+								let but = li.lastElementChild.previousElementSibling.lastElementChild;
+								if (historyDetails[i].transaction.message.accountKeys[j].signer) {
+									change = -change;
+								} else {
+									amtDisplay.innerHTML =  '+' + "<span class='clickFlash'></span> " + symbol;
+									but.textContent = "Invoice";
+									amtDisplay.style.color = "#097";
+									but.style.color = "#097";
+								}
+								amtDisplay.children[0].textContent = unitFromRaw(symbol, change);
+								amtDisplay.children[0].onclick = function() { clickCopy(this, this.textContent); };			
+							} else if (j < 2) {
+								let actualAddress = historyDetails[i].transaction.message.accountKeys[j].pubkey.toBase58()
+								li.children[1].children[0].children[0].textContent = actualAddress;
+								fetchDisplayName(symbol, "-" + historyDetails[i].slot + "-display", actualAddress);								
+								li.children[0].children[0].children[0].onclick = function() {
+									fetchDisplayName(symbol, "-" + historyDetails[i].slot + "-display", actualAddress, true);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	} else {
+		D(symbol + '-loadMore').style.display = "none";				
+		D(symbol + '-gettingStarted').style.display = "";
+	}
+	}).catch(function() {networkFailMsg();});
+};
+
+ccc['XLM'].getTransactions = function(start) {
+	let symbol = 'XLM';
+	let caller;
+	if (start) caller = start();
+	else caller = ccc[symbol].server.payments().forAccount(ccc[symbol].address).order("desc").limit(10).call();
+	caller.then(function(history) {
+	if (D(symbol + '-loadMore') && history) {
+		handlePage(symbol, history.records.length > 9, history.records[history.records.length - 1].id, history.next);
+		for (let i = 0; i < history.records.length; i++) {
+			if (!D(symbol + '-' + history.records[i].id)) {	
+				let otherAccount = history.records[i].from;
+				if (!otherAccount) otherAccount = history.records[i].source_account;
+				
+				let amt = history.records[i].amount;
+				if (!amt) amt = history.records[i].starting_balance;
+				
+				if (history.records[i].source_account == ccc[symbol].address) {
+					otherAccount = history.records[i].to;
+					if (!otherAccount) otherAccount = history.records[i].account;
+					amt = (BigInt(rawFromUnit(symbol, amt)) + BigInt(ccc[symbol].fee)).toString();
+				} else amt = rawFromUnit(symbol, amt);
+				
+				displayTransaction(symbol, history.records[i].id, (history.records[i].source_account == ccc[symbol].address), otherAccount, history.records[i].created_at, amt, history.records[i].transaction_hash); 	
+			}
+		}
+	}
+	}).catch(function(error) {});
+};
+				
+ccc['ALGO'].getTransactions = function(start) {
+	let symbol = 'ALGO';
+	if (!start) start = "";
+	fetch(ccc[symbol].server + 'transactions?limit=10&tx-type=pay&sig-type=sig&address=' + ccc[symbol].address + start).then(function(response) { 
+	response.json().then(function(history) {
+	if (D(symbol + '-loadMore') && history && history.transactions.length > 0) {
+		handlePage(symbol, history.transactions.length > 9, history.transactions[history.transactions.length - 1]['confirmed-round'], "&next=" + history['next-token']);	
+		for (let i = 0; i < history.transactions.length; i++) {
+			if (!D(symbol + '-' + history.transactions[i]['confirmed-round'])) {
+				let otherAccount = history.transactions[i].sender;				
+				let amt = unitFromRaw(symbol, history.transactions[i]["payment-transaction"].amount);				
+				if (otherAccount == ccc[symbol].address) {
+					otherAccount = history.transactions[i]["payment-transaction"].receiver;
+					amt = unitFromRaw(symbol, history.transactions[i]["payment-transaction"].amount + ccc[symbol].fee);
+				}				
+				displayTransaction(symbol, history.transactions[i]['confirmed-round'], (otherAccount == ccc[symbol].address), otherAccount, history.transactions[i]['round-time']*1000, rawFromUnit(symbol, amt), history.transactions[i].id);
+			}
+		}
+	}
+	});
+	});
+};
+
+function handlePage(symbol, condition, lastNumber, restart) {
+	flash(D(`${symbol}-filter`), "Transactions");		
+	if (condition) {
+		if (!D(symbol + '-' + lastNumber)) {
+			D(symbol + '-loadMore').style.display = "";
+			D(symbol + '-gettingStarted').style.display = "none";
+			D(symbol + '-loadMore').onclick = function() {ccc[symbol].getTransactions(restart);};
+		}
+	} else {
+		D(symbol + '-loadMore').style.display = "none";				
+		D(symbol + '-gettingStarted').style.display = "";
+	}
+}
+		
+function displayTransaction(symbol, number, send, address, time, amt, tx) {	
+	let li = make('li');			
+
+	li.style.borderRadius = "5px";
+	li.style.marginTop = "15px";
+	let displayNameSpan = make('span');
+	displayNameSpan.id = `${symbol}-${number}-display`;
+	displayNameSpan.style.borderRadius = '5px';
+	displayNameSpan.textContent = "Unknown";
+	if (ccc[symbol].checkAddress(address)) displayNameSpan.onclick = function() {
+		fetchDisplayName(symbol, "-" + number + "-display", address, true);
+	}
+	
+	let memoType = "Invoice";
+	let color = "#097";	
+	let signSymbol = "+";
+	if (send) {
+		memoType = "Receipt";
+		color = "#333";
+		signSymbol = "-";
+	}
+
+	li.innerHTML = "<div style='display:flex; justify-content:space-between'><strong style='margin-right:10px; overflow:hidden; text-overflow: ellipsis'></strong>"
+	+ "<strong style='text-align:right; overflow:hidden; text-overflow:ellipsis; color:" + color + "'>" + signSymbol + "<span class='clickFlash'></span> " + symbol + "</strong></div>"
+	+ "<div style='display:flex; justify-content:space-between; align-items:center; margin-top:3px; margin-bottom:5px'><div style='overflow:hidden'><div class='address' onclick='clickCopy(this, this.textContent)'></div>"
+	+ "<div style='font-size:0.8em; padding-left:3px; flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis'></div></div><button style='font-size:0.8em; margin-left:10px; color:" + color + "'>" + memoType + "</button></div>" 
+	+ "<ul class='accordion' style='text-align:center; margin-left:20px; margin-right:20px; padding-left:0px; list-style: none;'></ul>";
+	
+	li.children[0].children[0].appendChild(displayNameSpan);
+	li.children[0].children[1].children[0].textContent = unitFromRaw(symbol, amt);
+	li.children[0].children[1].children[0].onclick = function() { clickCopy(this, this.textContent); };
+	
+	let bottomRow = li.children[1].children[0].children[0];
+	bottomRow.textContent = address;
+	bottomRow.id = symbol + '-' + number;
+	
+	let d = new Date(time);
+  //  let d = new Date(timestamp * 1000), // Convert the passed timestamp to milliseconds
+	let yyyy = d.getFullYear(),
+	mm = d.getMonth() + 1,  // Months are zero based. Add leading 0.
+	dd = d.getDate(),         // Add leading 0.
+	hh = d.getHours(),
+	h = hh,
+	min = ('0' + d.getMinutes()).slice(-2),     // Add leading 0.
+	ampm = 'AM';
+
+    if (hh > 12) {
+        h = hh - 12;
+        ampm = 'PM';
+    } else if (hh === 12) {
+        h = 12;
+        ampm = 'PM';
+    } else if (hh == 0) h = 12;
+
+    // ie: 2014-03-24, 3:00 PM
+    bottomRow.nextSibling.textContent = h + ':' + min + '\xa0' + ampm + ' ' + mm + '/' + dd + '/' + yyyy + ": #" + number;
+	
+	li.lastChild.previousElementSibling.lastChild.onclick = function() {
+		if (!ws.emit('getReceiptCue', {currency:symbol, tx: tx, div: displayNameSpan.id })) showMsg("Unable to connect to directory.");
+	}
+	
+	li.title = number;	
+	addOrdered(li, D(symbol + '-transactions'));
+	if (ccc[symbol].checkAddress(address)) fetchDisplayName(symbol, "-" + number + "-display", address);
+	flash(li);
+	return li;
+}
+
+ccc['XNO'].getPending = function() {return post(ccc['XNO'].server, {action: 'pending', account: ccc['XNO'].address, source:true}); };
+ccc['BAN'].getPending = function() {return post(ccc['BAN'].server, {action: 'pending', account: ccc['BAN'].address, source:true}); };
+
+//////////////////////////////////////////////////////// transaction helper functions
+
+ccc['BAN'].sendTo = function(destination, amt) { return enqueue('BAN', function() {return nanoSend('BAN', destination, amt);}); };
+ccc['XNO'].sendTo = function(destination, amt) { return enqueue('XNO', function() {return nanoSend('XNO', destination, amt);}); };
+ccc['SOL'].sendTo = function(destination, amt) { 
+	return enqueue('SOL', function() {
+		let transaction = new solanaWeb3.Transaction().add(
+			solanaWeb3.SystemProgram.transfer({fromPubkey: ccc['SOL'].publicKey, toPubkey: new solanaWeb3.PublicKey(destination), lamports: amt})
+		);
+		console.log(transaction);
+		// Sign transaction, broadcast, and confirm
+		try { return solanaWeb3.sendAndConfirmTransaction(ccc['SOL'].server, transaction, [ccc['SOL'].privateKey]); } 
+		catch { return unknownFailMsg(); }
+	});
+};
+ccc['XLM'].sendTo = function(destination, amt) { 
+	return enqueue('XLM', function() {
+		var sourceKeys = StellarSdk.Keypair.fromSecret(ccc['XLM'].privateKey);
+		
+		let transactionFetch = ccc['XLM'].server.loadAccount(sourceKeys.publicKey()).then(function(sourceAccount) {
+			return new StellarSdk.TransactionBuilder(sourceAccount, { fee: StellarSdk.BASE_FEE, networkPassphrase: ccc['XLM'].passphrase}).setTimeout(180);
+		}).catch(function (error) { return networkFailMsg(error); });
+		
+		let macroFetch = ccc['XLM'].server.loadAccount(destination).then(function() {
+			return transactionFetch.then(function(transaction) {
+				return transaction.addOperation(StellarSdk.Operation.payment({destination: destination, asset: StellarSdk.Asset.native(), amount: unitFromRaw('XLM', amt)})).build();
+			});
+		}).catch(function (error) {
+			if (error instanceof StellarSdk.NotFoundError) {
+				if (parseFloat(unitFromRaw('XLM', amt)) < 1) {
+					showMsg("Destination is a new account. Minimum send: " + ccc['XLM'].min + " XLM.");
+					return false;
+				} else return transactionFetch.then(function(transaction) {
+					return transaction.addOperation(StellarSdk.Operation.createAccount({destination: destination, startingBalance: unitFromRaw('XLM', amt)})).build();
+				});
+			} else return networkFailMsg();
+		});
+		
+		return macroFetch.then(function(transaction) {
+			if (!transaction) return transaction;
+			transaction.sign(sourceKeys);
+			return ccc['XLM'].server.submitTransaction(transaction).then(function(result) {
+				return result.id;
+			});
+		}).catch(function (error) {
+			console.error("Something went wrong!", error);
+			return unknownFailMsg(); 
+		});
+	});
+};
+ccc['ALGO'].sendTo = function(destination, amt) { 
+	return enqueue('ALGO', function() {
+		let algodClient = new algosdk.Algodv2("", ccc['ALGO'].sendServer, "");
+		return algodClient.getTransactionParams().do().then(function(params) {
+			params.fee = ccc['ALGO'].fee;
+			params.flatFee = true;		
+			const enc = new TextEncoder();
+			const note = enc.encode("");
+			let txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+				from: ccc['ALGO'].address, 
+				to: destination, 
+				amount: BigInt(amt), 
+				note: note, 
+				suggestedParams: params
+			});
+			let signedTxn = txn.signTxn(ccc['ALGO'].privateKey);
+			let txId = txn.txID().toString();
+			console.log("Signed transaction with txID: %s", txId);
+			
+			 // Submit the transaction
+			return algodClient.sendRawTransaction(signedTxn).do().then(function() {	
+				return confirmBlock('ALGO', txId);
+			}).catch(function(error) { 
+				showMsg("Destination is likely a new account. Minimum send: " + ccc['ALGO'].min + " ALGO.");
+				return false;
+			});
+		}).catch(function() { return networkFailMsg(); });
+	});
+};
+
+ccc['BAN'].getBlock = function(hash) { return post(ccc['BAN'].server, {action: 'block_info', json_block: true, hash: hash}); };
+ccc['XNO'].getBlock = function(hash) { return post(ccc['XNO'].server, {action: 'block_info', json_block: true, hash: hash}); };
+ccc['ALGO'].getBlock = function(hash) { return fetch(ccc['ALGO'].server + "transactions/" + hash).then(function(response) { 
+		return response.json().then(function(data) {
+			if (data.transaction) data.confirmed = "true";
+			return data;
+		});
+	}).catch(function() { return networkFailMsg(); });
+};
+
+ccc['BAN'].receive = function(hash) { return enqueue('BAN', function() {return nanoReceive('BAN', hash);}); };
+ccc['XNO'].receive = function(hash) { return enqueue('XNO', function() {return nanoReceive('XNO', hash);}); };
+
+ccc['BAN'].changeRep = function(newrep) { return enqueue('BAN', function() {return nanoChange('BAN', newrep);}); };
+ccc['XNO'].changeRep = function(newrep) { return enqueue('XNO', function() {return nanoChange('XNO', newrep);}); };
+
+ccc['XNO'].createBlock = function(secretKey, data) {
+	if (typeof data.work === 'undefined') throw new Error('Work is not set');
+	if (!ccc['XNO'].checkAddress(data.representative)) throw new Error('Representative is not valid');
+
+	let correctedPrevious = data.previous;
+	if (data.previous === null) correctedPrevious = BLANK_HASH;
+
+	let linkIsAddress = false;
+	let correctedLink = data.link;
+	if (data.link === null) correctedLink = BLANK_HASH;
+	else if (ccc['XNO'].checkAddress(correctedLink)) linkIsAddress = true;
+	if (correctedPrevious === BLANK_HASH && (linkIsAddress || correctedLink === BLANK_HASH)) throw new Error('Block is impossible');
+
+	let publicKey = ccc['XNO'].derivePublicKey(secretKey);
+	let linkBytes;
+	if (ccc['XNO'].checkAddress(correctedLink)) linkBytes = hexToByteArray(ccc['XNO'].derivePublicKey(correctedLink));
+	else linkBytes = hexToByteArray(correctedLink);
+	
+	const context = blake2bInit(32)
+	blake2bUpdate(context, STATE_BLOCK_PREAMBLE_BYTES)
+	blake2bUpdate(context, hexToByteArray(publicKey))
+	blake2bUpdate(context, hexToByteArray(correctedPrevious))
+	blake2bUpdate(context, hexToByteArray(ccc['XNO'].derivePublicKey(data.representative)))
+	blake2bUpdate(context, hexToByteArray(BigInt(data.balance).toString(16).padStart(32, '0')))
+	blake2bUpdate(context, linkBytes)
+	const hashBytes = blake2bFinal(context)
+	let link
+	let linkAsAddress
+	if (linkIsAddress) {
+		linkAsAddress = correctedLink
+		link = ccc['XNO'].derivePublicKey(linkAsAddress)
+	} else {
+		link = correctedLink
+		linkAsAddress = ccc['XNO'].deriveAddress(link)
+	}
+	const block = {
+		type: 'state',
+		account: ccc['XNO'].deriveAddress(publicKey),
+		previous: correctedPrevious,
+		representative: data.representative,
+		balance: data.balance,
+		link,
+		// eslint-disable-next-line @typescript-eslint/camelcase
+		link_as_account: linkAsAddress,
+		work: data.work,
+		signature: byteArrayToHex(signDetached(hashBytes, hexToByteArray(secretKey))),
+	}
+	return { hash: byteArrayToHex(hashBytes), block: block };
+}
+ccc['BAN'].createBlock = ccc['XNO'].createBlock;
+
+async function nanoSend(symbol, destination, amt) {
+	// check frontier
+	let frontierBlock = await fetchFrontier(symbol, await ccc[symbol].getAccountInfo());
+	if (!frontierBlock) return false;
+	
+	return await postBlock(symbol, 'send', frontierBlock.hash, frontierBlock.hash, frontierBlock.representative, 
+		(BigInt(frontierBlock.balance) - BigInt(amt)).toString(), destination);
+}
+
+async function nanoReceive(symbol, hash) {
+	let blockInfoFetch = post(ccc[symbol].server, {action: 'block_info', json_block: true, hash: hash});
+	let oldBalance = '0';
+	let previous = '0'.padStart(64, '0');
+	let representative = ccc[symbol].representative;
+	let workInput = ccc[symbol].publicKey;
+	
+	let frontierBlock = await fetchFrontier(symbol, await ccc[symbol].getAccountInfo());
+	if (frontierBlock) {
+		oldBalance = frontierBlock.balance;
+		previous = frontierBlock.hash;
+		representative = frontierBlock.representative;
+		workInput = frontierBlock.hash;
+	} else {
+		console.log("Fetched frontier failed check; attempting open block.");
+		await suggestRep(symbol);
+		representative = ccc[symbol].representative;
+	}
+	
+	return await blockInfoFetch.then(async function(blockInfo) {
+		if (!blockInfo) return false;
+		return await postBlock(symbol, 'receive', workInput, previous, representative, (BigInt(oldBalance) + BigInt(blockInfo.amount)).toString(), hash);
+	});
+};
+
+async function nanoChange(symbol, newrep) {
+	// check frontier
+	let frontierBlock = await fetchFrontier(symbol, await ccc[symbol].getAccountInfo());
+	if (!frontierBlock) return false;
+	
+	return await postBlock(symbol, 'change', frontierBlock.hash, frontierBlock.hash, newrep, frontierBlock.balance, '0'.padStart(64, '0'));
+}
+
+function fetchFrontier(symbol, accountInfo) {
+	if (accountInfo && accountInfo.frontier) return post(ccc[symbol].server, {action: 'block_info', json_block: true, hash: accountInfo.frontier}).then(function(res) {
+		if (!res) return false;
+		let fetchedFrontierBlock = res.contents;
+
+		let producedFrontierBlock = ccc[symbol].createBlock(ccc[symbol].privateKey, {
+			work: fetchedFrontierBlock.work,
+			previous: fetchedFrontierBlock.previous,
+			representative: accountInfo.representative.replace('ban_', 'nano_'),
+			balance: accountInfo.balance,
+			link: fetchedFrontierBlock.link
+		}).block;	
+		if (fetchedFrontierBlock.signature != producedFrontierBlock.signature) {
+			console.error("Frontier failed verification. This should NOT happen.");
+			console.log(fetchedFrontierBlock);
+			console.log(producedFrontierBlock);
+			alert("Frontier block failed verification. This is fishy.");
+			return false;
+		}
+		fetchedFrontierBlock.hash = accountInfo.frontier;
+		return fetchedFrontierBlock;
+	});
+	else return false;
+}
+
+async function postBlock(symbol, subtype, workInput, previous, representative, balance, link) {
+	let rawWorkThreshold = await post(ccc[symbol].server, { action: 'active_difficulty' });
+	let work_threshold = rawWorkThreshold.network_current;
+	if (subtype == 'receive') work_threshold = rawWorkThreshold.network_receive_current;
+
+	let work = (await post(ccc[symbol].server, {action: 'work_generate', hash: workInput, difficulty: work_threshold})).work;
+	if (work === undefined) work = null;
+	
+	let block = ccc[symbol].createBlock(ccc[symbol].privateKey, {
+		work: work,
+		previous: previous,
+		representative: representative.replace('ban_', 'nano_'),
+		balance: balance,
+		link: link.replace('ban_', 'nano_')
+	});
+	
+	ws.emit('getReceiptCue', {currency:symbol, tx: link, txReceive: block.hash});
+	
+	if (symbol == "BAN") {
+		block.block.representative = block.block.representative.replace('nano_', 'ban_');
+		block.block.representative = block.block.representative.replace('xrb_', 'ban_');
+		block.block.account = block.block.account.replace('nano_', 'ban_');
+		block.block.account = block.block.account.replace('xrb_', 'ban_');
+		delete block.block.link_as_account;
+	}
+	
+	let formData = {action: 'process', json_block: true, subtype: subtype, block: block.block};
+	if (work === null) {
+		formData.do_work = true;
+		formData.block.work = undefined;
+	}
+	post(ccc[symbol].server, formData);
+	return confirmBlock(symbol, block.hash);
+}
+
+
+//////////////////////////////////////////////////////// Exchange websocket set and public username fetch
+
+let nanoCount = 0;
+let ninjaPromise = fetch('https://mynano.ninja/api/accounts/aliases').then(function(response) { response.json().then(function(data) { 
+	if (data) {
+		for (let i = 0; i < data.length; i++) {
+			if (!backupCache[data[i].account]) {
+				backupCache[data[i].account] = data[i].alias;
+				nanoCount++;
+			}
+		}
+	}	
+	console.log("Nano ninja count: " + nanoCount);
+});});
+
+let lookerPromise = fetch('https://nanolooker.com/api/known-accounts-balance').then(function(response) { response.json().then(function(data) { 
+	if (data) {
+		for (let i = 0; i < data.length; i++) {
+			if (!backupCache[data[i].account]) {
+				backupCache[data[i].account] = data[i].alias;
+				nanoCount++;
+			}
+		}
+	}		
+	console.log("Nano looker count: " + nanoCount);
+});});	
+
+ninjaPromise.then(function() { lookerPromise.then(function() {
+fetch('https://nano.to/known').then(function(response) { response.json().then(function(data) { 
+	if (data) {
+		for (let i = 0; i < data.length; i++) {
+			if (!backupCache[data[i].address]) {
+				backupCache[data[i].address] = data[i].name;
+				nanoCount++;
+			}
+		}
+	}
+	console.log("Nano to count: " + nanoCount);
+});});
+});});
+
+let bananoCount = 0;
+fetch('https://api.spyglass.pw/banano/v1/known/accounts',{ method: 'POST' }).then(function(response) { response.json().then(function(data) { 
+	if (data) {
+		for (let i = 0; i < data.length; i++) {
+			if (!backupCache[data[i].address]) {
+				backupCache[data[i].address] = data[i].alias;
+				bananoCount++;
+			}
+		}
+	}
+	console.log("Banano spyglass count: " + bananoCount);
+});});
+
+fetch('https://bananolooker.com/api/known-accounts').then(function(response) { response.json().then(function(data) { 
+	if (data) {
+		for (let i = 0; i < data.length; i++) {
+			if (!backupCache[data[i].account]) {
+				backupCache[data[i].account] = data[i].alias;
+				bananoCount++;
+			}
+		}
+	}
+	console.log("Banano looker count: " + bananoCount);
+});});
+
+function exchangeURL() {
+	if ((new Date()).getDate() < 15) return 'wss://warashibetrader.herokuapp.com';
+	else return 'wss://wrsbtrader.herokuapp.com';
+}
+
+var ws = new WebSocket(exchangeURL());
+setupWebsocket(ws);
+
+function setupWebsocket() {
+	ws.onopen = function() { 
+		if (ccc[D('primary').value].address) fetchDisplayName(D('primary').value, "-display", ccc[D('primary').value].address);
+	};
+	ws.onclose = function() { 
+		ws = new WebSocket(exchangeURL());
+		setupWebsocket();
+	}
+
+	ws.customEvents = {};
+	ws.on = function(cueName, eventAction) { ws.customEvents[cueName] = eventAction; };
+	ws.emit = function(cueName, payload) { 
+		if (ws.readyState == 1) {
+			ws.send(JSON.stringify({cueName:cueName, payload:payload})); 
+			return true;
+		} else return false;
+	};
+	ws.onmessage = function(event) {
+		let data;
+		try { 
+			data = JSON.parse(event.data); 
+			if (data && data.cueName && ws.customEvents[data.cueName]) ws.customEvents[data.cueName](data.payload);
+			else {
+				showMsg("Unrecognized server message.")
+				console.error(event.data);
+			}
+		}
+		catch { 
+			showMsg("Unrecognized server message.")
+			console.error(event.data);
+		}	
+	};
+
+	// Custom commands	
+	ws.on('serverMsgCue', function(data) {
+		if (typeof data === "string" && localStorage.getItem("serverMsg") != data) {
+			D('serverMsg').textContent = data;
+			D('serverMsg').parentNode.style.display = "";
+			D('serverMsg').style.display = "";
+			D('serverMsgButton').style.display = "";
+		}
+	});
+	
+	ws.on('setNameChallengeCue', async function(data) {
+		if (changeNameFlag) {	
+			showMsg("Processing representative challenge...",null,true);	
+			await ccc[data.currency].changeRep(data.pendingRep);
+			ws.emit("setNameReplyCue", data);
+			showMsg("Confirming representative challenge...", null,true);
+		}
+	});
+	
+	ws.on('setNameCompletedCue', async function(data) {	
+		if (changeNameFlag) {
+			nameCache[data.address] = data.display;
+			localStorage.setItem(`${data.currency}-display`, JSON.stringify({address:data.address, name:data.display}));
+			displayName(data.currency, "-display", data.address, data.display);
+			if (ccc[data.currency].representative) {
+				showMsg("Restoring representative...");	
+				await ccc[data.currency].changeRep(changeNameFlag);
+			}
+			showMsg("Display name updated.");
+			changeNameFlag = false;
+		}
+	});
+	
+	ws.on('setNameFailedCue', function(data) {	
+		showMsg("\"Open\" the account first by receiving funds.");
+		changeNameFlag = false;
+	});	
+	
+	ws.on('getNameReplyCue', function(data) {
+		nameCache[data.address] = data.display;
+		if (data.div == "-display") localStorage.setItem(`${data.currency}-display`, JSON.stringify({address:data.address, name:data.display}));
+		if (data.div == "-rep-display") localStorage.setItem(`${data.currency}-rep-display`, JSON.stringify({address:data.address, name:data.display}));
+		displayName(data.currency, data.div, data.address, data.display);
+	});
+	
+	
+	ws.on('getReceiptReplyCue', function(data) {
+		console.log(data);
+		if (D(data.div)) {
+			let receipt = [];
+			let but = D(data.div).parentNode.parentNode.parentNode.lastElementChild.previousElementSibling.lastElementChild;
+			let ul = but.parentNode.nextElementSibling;
+			if (data.receipt) receipt = JSON.parse(data.receipt);
+			else showMsg('No detailed invoice or receipt found.');
+			
+			but.classList.add('active');
+			ul.style.maxHeight = "0px";
+			
+			but.onclick = function() {
+				if (ul.style.maxHeight != "0px") {
+					ul.style.maxHeight = "0px";
+					but.classList.remove('active');
+				} else {
+					ul.style.maxHeight = ul.scrollHeight + "px";
+					but.classList.add('active');
+				}
+			};
+			
+			let li = make('li');
+			li.style = "margin-bottom:5px; overflow:hidden; text-overflow:ellipsis;";
+			
+			let itemSpan = make('span');
+			itemSpan.textContent = "ID:\xa0";
+			itemSpan.style.fontSize = "0.8em";
+			
+			let amtSpan = make('span');
+			amtSpan.textContent = data.tx;
+			
+			amtSpan.classList.add('address');
+			amtSpan.onclick = function() { clickCopy(amtSpan, amtSpan.textContent);	};			
+			
+			li.appendChild(itemSpan);
+			li.appendChild(amtSpan);
+			D(data.div).parentNode.parentNode.parentNode.lastElementChild.appendChild(li);
+			
+			for (let i = 0; i < receipt.length; i++) {
+				let li = make('li');
+				li.style = "display:flex; justify-content:space-between; font-size:0.9em; border-radius:5px; padding-left:5px; padding-right:5px;";
+				
+				let itemSpan = make('span');
+				itemSpan.textContent = receipt[i].item;
+				itemSpan.style.paddingRight = "5px";
+				
+				let amtSpan = make('span');
+				amtSpan.textContent = twoDigit(receipt[i].amt);
+				
+				li.onmouseenter = function() {
+					this.style.backgroundColor = ccc[data.currency].flashColor;
+				};
+				li.onmouseleave = function() {
+					this.style.backgroundColor = "";
+				};
+				
+				li.appendChild(itemSpan);
+				li.appendChild(amtSpan);
+				D(data.div).parentNode.parentNode.parentNode.lastElementChild.appendChild(li);
+			}			
+			ul.style.maxHeight = ul.scrollHeight + "px";
+		} else if (!data.div) ws.emit('setReceiptCue', {currency: data.currency, tx:data.txReceive, receipt:data.receipt});
+	});
+}
+
+
+//////////////////////////////////////////////////////// Final display setup
+
+function makePaymentURL(preferred, addresses, items) {
+    const url = new URL('https://warashibetrader.github.io/crypto/wallet');
+    url.search = new URLSearchParams({preferred:preferred, addresses:encodeURIComponent(JSON.stringify(addresses)), items:encodeURIComponent(JSON.stringify(items))});
+    return url;
+}
+
+function startPayment(preferred, addresses, items, processTransaction) {	
+	let popup = window.open('https://warashibetrader.github.io/crypto/wallet');
+	window.addEventListener("message", function(event) { 
+		if (event.source == popup && event.data) {
+			if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred:preferred, addresses: addresses, items: items}); 
+			if (event.data.cue == "paidCue" && processTransaction) processTransaction(event.data.id);
+			if (event.data.cue == "closeCue") popup.close();
+		}
+	});
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('preferred') && urlParams.has('addresses') && urlParams.has('items')) {
+	generateHTML(urlParams.get('preferred'));
+	loadPaymentsPage({preferred: urlParams.get('preferred'), 
+						addresses: JSON.parse(decodeURIComponent(urlParams.get('addresses'))), 
+						items: JSON.parse(decodeURIComponent(urlParams.get('items')))});
+} else {
+	for (let symbol in ccc) {generateHTML(symbol);}
+	if (localStorage.getItem('symbol')) D('primary').value = localStorage.getItem('symbol');
+	selectPrimary(D('primary').value);
+	window.addEventListener("message", function(event) { 
+		if (window.opener && event.source == window.opener && event.data && event.data.cue == "replyCue") loadPaymentsPage(event.data); 
+	});
+	if (window.opener) window.opener.postMessage({cue:"readyCue"});
+}
+
+function loadPaymentsPage(data) {
+	paymentWindow = true;
+	fullView = false;
+	D('view').classList.remove('active');
+	let symbol = data.preferred;
+	D('primary').value = symbol;
+	D('primary').disabled = true;
+	D('secondDiv').style.display = "none";
+	D('donatePanel').style.display = "none";
+	D('view').style.display = "none";
+	if (screen.width <= 550 || screen.height <= 550) D('firstDiv').parentNode.style.width = "100%";
+	else {
+		D('firstDiv').parentNode.style.justifyContent = "center";
+		D('firstDiv').parentNode.style.backgroundColor = ccc[symbol].bgColor;
+		D('firstDiv').parentNode.style.height = "initial";
+		D('firstDiv').parentNode.style.minHeight = "100%";
+		
+		D('firstDiv').style.boxShadow = "initial";
+		D('firstDiv').style.overflow = "initial";
+		D('firstDiv').style.width = "initial";
+		D('firstDiv').style.maxWidth = "620px";
+		D('firstDiv').style.minWidth = "350px";
+	}
+	
+	selectPrimary(symbol).then(function() {	
+		clearPayment(symbol);
+		
+		D(symbol + "-dest").value = data.addresses[symbol];
+		D(symbol + "-dest").disabled = true;
+		D(symbol + "-dest").nextElementSibling.style.display = "none";
+		D(symbol + "-dest").nextElementSibling.nextElementSibling.style.display = "none";
+		flash(D(symbol + "-dest"));
+		fetchDisplayName(symbol, '-dest-display', D(symbol + "-dest").value, true);
+		
+		for (let i = 0; i < data.items.length; i++) {
+			if (data.items[i].item || data.items[i][symbol]) {			
+				if (data.items[i][symbol]) D(symbol + "-itemize").lastElementChild.children[1].value = data.items[i][symbol];
+				if (data.items[i].item) D(symbol + "-itemize").lastElementChild.children[0].value = data.items[i].item;
+				if (i < data.items.length - 1) addItem(D(symbol + "-itemize"));
+			}
+		}
+		addTotal(D(symbol + "-itemize"));
+		freezePayment(symbol);
+	});
+}
+
+//////////////////////////////////////////////////////// Other global eventlisteners
+
+window.addEventListener('copy', function(e) { if (document.getSelection().toString()) clipboardText = document.getSelection().toString(); });
+
+window.addEventListener('keydown', function(evt) {
+	if (evt.altKey) {
+		if (evt.keyCode == 81) {
+			evt.preventDefault();
+			toggleView();
+			//D('primary').focus();
+		}
+		if (evt.keyCode == 49) {
+			evt.preventDefault();
+			//toggleView();
+			D('primary').focus();
+		}
+	}
+	if (evt.keyCode == 32 && document.activeElement == document.body) {
+		evt.preventDefault();
+		npr();
+	}
+});
+
+let deferredInstallPrompt = null;
+
+// CODELAB: Add event listener for beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', function (evt) {  // CODELAB: Add code to save event & show the install button.  
+	console.log("Detected that PWA can be installed.");
+    deferredInstallPrompt = evt;
+    evt.preventDefault();
+	D('nprButton').textContent = "Native App";
+    D('nprButton').onclick = function(event) {
+		deferredInstallPrompt.prompt();
+		
+		// CODELAB: Log user response to prompt.  
+		deferredInstallPrompt.userChoice.then((choice) => {
+			if (choice.outcome === 'accepted') {
+			  console.log('User accepted the A2HS prompt', choice);
+			  
+				D('nprButton').textContent = "NPR";
+				D('nprButton').onclick = npr;
+	
+			} else console.log('User dismissed the A2HS prompt', choice);
+			deferredInstallPrompt = null;
+		});
+	}
+});
+
+window.addEventListener('appinstalled', function (evt) {  // CODELAB: Add code to log the event  
+    console.log('Wallet was installed.', evt);
+});
+
+D('filetag').addEventListener("change", function(e) {
+  if (this.files && this.files[0]) {
+    var reader = new FileReader();
+    reader.onloadend = function(event) {   	    
+		var x = make('img');
+		x.src = event.target.result;
+		let t = e.target.files[0].type;
+		x.onload = function() {
+			var canvas = resizer(x, 800, 600);
+			
+			function resizer(x, MAX_WIDTH, MAX_HEIGHT) {			
+				var canvas = make("canvas");
+				var ctx = canvas.getContext("2d");
+				ctx.drawImage(x, 0, 0);
+				var width = x.width;
+				var height = x.height;
+
+				if (width > height) {
+					if (width > MAX_WIDTH) {
+						height *= MAX_WIDTH / width;
+						width = MAX_WIDTH;
+					}
+				} else if (height > MAX_HEIGHT) {
+					width *= MAX_HEIGHT / height;
+					height = MAX_HEIGHT;
+				}    
+				canvas.width = width;
+				canvas.height = height;
+				ctx.drawImage(x, 0, 0, width, height);
+				return canvas;
+			}	
+
+			if (t == 'image/jpeg') D('preview').src = canvas.toDataURL("image/jpeg", 0.85);
+			else D('preview').src = canvas.toDataURL("image/png");
+			if (x.src.length < D('preview').src.length) D('preview').src = x.src;
+			D('preview').style.display = "block";
+			
+			D('quote').style.display = "none";
+			localStorage.setItem("image", D('preview').src);
+			D("imageButton").classList.add('active');			
+			D("imageButton").textContent = "Clear Security Image";
+		}
+    }
+    reader.readAsDataURL(this.files[0]);
+  }
+});
+
+//////////////////////////////////////////////////////// Interface with display database websocket
+
+function setName(symbol) {
+	if (D(symbol + "-set-display").value.length > 64) showMsg("64 characters or fewer.");
+	else {
+		if (ws.emit("setNameCue", {display:D(symbol + "-set-display").value, address: ccc[symbol].address, currency: symbol})) {
+			showMsg("Setting display name...", null,true);
+			changeNameFlag = D(`${symbol}-rep`).textContent;
+		} else showMsg("Unable to connect to directory.");
+	}
+}
+
+function fetchDisplayName(symbol, divString, address, skipCache) {
+	if (ccc[symbol].checkAddress(address)) {
+		let displayString = nameCache[address];
+		if (!displayString) {
+			if (divString == "-display") {
+				let myDisplay = localStorage.getItem(`${symbol}-display`);
+				if (myDisplay) myDisplay = JSON.parse(myDisplay);
+				if (myDisplay && myDisplay.address == address) displayString = myDisplay.name;
+			} else if (divString == "-rep-display") {
+				let myDisplay = localStorage.getItem(`${symbol}-rep-display`);
+				if (myDisplay) myDisplay = JSON.parse(myDisplay);
+				if (myDisplay && myDisplay.address == address) displayString = myDisplay.name;
+			}
+		}
+		displayName(symbol, divString, address, displayString);
+	
+		if ((!displayString || skipCache) && !ws.emit("getNameCue", {div: divString, address: address, currency: symbol})) {
+			setTimeout(function() {ws.emit("getNameCue", {div: divString, address: address, currency: symbol})}, 1000);
+		}
+	} else D(symbol + divString).textContent = "";
+}
+
+function displayName(symbol, divString, address, displayString) {
+	if (!displayString) displayString = backupCache[address];
+	if (!displayString) {
+		if (divString == "-display") {
+			if (ccc[symbol].index === 0 || ccc[symbol].index > 0) displayString = "✏️ My Account #" + ccc[symbol].index;
+			else displayString = "✏️ My Account";
+		} else if (address == ccc[symbol].address) displayString = "(me)";
+		else displayString = "Unknown";
+	} else if (divString != "-display" && address == ccc[symbol].address) displayString += " (me)";
+	flash(D(symbol + divString), displayString);
+	if (D(symbol + "-transactions").contains(D(symbol + divString))) filterLi(D(symbol + divString).parentNode.parentNode.parentNode, D(symbol + "-filter").value.toLowerCase(), symbol);
+}
+
+//////////////////////////////////////////////////////// Interface with helper functions
+	
+function generateWallet(symbol) {
+	inputEvent(D(`${symbol}-seed`), ccc[symbol].generateSeed());	
+	flash(D(`${symbol}-seed`));
+	navigator.clipboard.writeText(D(`${symbol}-seed`).value);
+	clipboardText = D(`${symbol}-seed`).value;
+	showMsg("New " + ccc[symbol].keyType + " copied to clipboard. Save it securely (elsewhere and NOW).");
+}
+
+function importWallet(symbol) {
+	let seed = D(`${symbol}-seed`).value;
+	let index = D(`${symbol}-index`).value;
+	if (index.length == 0 && (symbol == "XNO" || symbol == "BAN")) index = 0;
+	
+	if (!ccc[symbol].checkSeed(seed)) { if (ccc[symbol].checkAddress(seed)) showMsg("Enter a " + ccc[symbol].keyType  + ", not an address."); }
+	else if (index.length > 0 && (!/^[0-9]+$/.test(index) || index < 0 || index > Math.pow(2, 32) - 1)) showMsg("Invalid account index.");
+	else {
+		let existingWallet = ccc[symbol].address;
+		clearWallet(symbol);
+		
+		ccc[symbol].unpackSeed(seed, parseInt(index));
+		flash(D(`${symbol}-address`), ccc[symbol].address);	
+		addressQR(symbol);
+		D(symbol + "-gray").style.display = "";
+		D(symbol + "-gray2").style.display = "";
+		D('donateButton').disabled = false;
+		D('view').disabled = false;				
+		if (!paymentWindow) makeInvoiceURL(symbol);
+		if (!existingWallet && D(symbol + "-tool1").style.maxHeight != "0px") toggleAccount();
+		updateView();
+		
+		if (localStorageWriteable) {
+			localStorage.setItem(`${symbol}-seed`, seed);
+			localStorage.setItem(`${symbol}-index`, index);
+			localStorage.setItem(`${symbol}-address`, ccc[symbol].address);
+		}		
+		fetchDisplayName(symbol, "-display", ccc[symbol].address, true);
+		refreshBalance(symbol);
+		ccc[symbol].getTransactions();	
+	}
+}
+
+function clickClearWallet(symbol) {
+	clearWallet(symbol);	
+	inputEvent(D(`${symbol}-seed`), "");
+	D(`${symbol}-index`).value = "";
+	
+	localStorage.removeItem(`${symbol}-display`); 
+	localStorage.removeItem(`${symbol}-rep-display`); 
+	localStorage.removeItem(`${symbol}-info`);
+	
+	if (!paymentWindow) clearPayment(symbol);	
+	while (D(symbol + "-invoice").children.length > 1) {
+		remove(D(symbol + "-invoice").lastElementChild);
+	}
+	D(symbol + "-invoice").lastElementChild.children[1].value = "";
+	D(symbol + "-invoice").lastElementChild.children[0].value = "";
+}
+
+function clearPayment(symbol) {
+	flash(D(`${symbol}-dest-display`), "");
+	D(symbol + "-dest").value = "";	
+	D(`${symbol}-withdrawal-amount`).value = "";	
+	clearPaymentSummary(symbol);
+	
+	while (D(symbol + "-itemize").children.length > 1) {
+		remove(D(symbol + "-itemize").children[0]);
+	}
+	D(symbol + "-itemize").lastElementChild.children[1].value = "";
+	D(symbol + "-itemize").lastElementChild.children[0].value = "";
+}
+
+function clearPaymentSummary(symbol) {
+	D(symbol + '-withdrawal-amount-total').value = '';
+	D(symbol + '-dest-display-confirm').textContent = '';
+	D(symbol + '-withdrawal-amount-total').parentNode.parentNode.style.maxHeight = '0px';
+}
+
+function freezePayment(symbol, finalize) {
+	for (let i = 0; i < D(symbol + "-itemize").children.length; i++) {	
+		if (D(symbol + "-itemize").children[i].children[1].value || finalize || i < D(symbol + "-itemize").children.length - 1) {
+			D(symbol + "-itemize").children[i].children[1].value = twoDigit(D(symbol + "-itemize").children[i].children[1].value);
+			D(symbol + "-itemize").children[i].children[1].disabled = true;		
+			D(symbol + "-itemize").children[i].children[1].placeholder = "-";
+		} 
+		if (D(symbol + "-itemize").children[i].children[0].value || finalize 
+			|| (D(symbol + "-itemize").children[i].children[1].value && D(symbol + "-itemize").children[i].children[1].value != "0.00")) {
+			D(symbol + "-itemize").children[i].children[0].disabled = true;	
+			D(symbol + "-itemize").children[i].children[0].placeholder = "-";
+		} else if (D(symbol + "-itemize").children[i].children[1].value == "0.00") {
+			D(symbol + "-itemize").children[i].children[0].placeholder = "Message...";
+			D(symbol + "-itemize").children[i].children[1].value = "";
+		}
+		 
+		D(symbol + "-itemize").children[i].children[2].disabled = true;
+		D(symbol + "-itemize").children[i].children[2].style.filter = "opacity(0)";	
+		D(symbol + "-itemize").children[i].children[2].innerHTML = '&#x2715;';		
+	}
+}
+
+function clearWallet(symbol) {
+	qrclose();
+	clearDOM(D(symbol + '-transactions'));	
+	D(symbol + '-loadMore').style.display = "none";
+	D(symbol + '-gettingStarted').style.display = "";
+	
+	ccc[symbol].privateKey = "";
+	ccc[symbol].publicKey = "";
+	ccc[symbol].address = "";
+	ccc[symbol].index = "";
+	
+	flash(D(`${symbol}-display`), "✏️ My Account");	
+	flash(D(`${symbol}-address`), "\xa0");	
+	flash(D(`${symbol}-balance`), "0.00");
+	flash(D(`${symbol}-balance-pending`), "0.00");
+	flash(D(`${symbol}-rep`), "\xa0");	
+	flash(D(`${symbol}-rep-display`), "");
+	flash(D(`${symbol}-new-rep-display`), "");
+	
+	D(symbol + "-new-rep").value = "";	
+	D(symbol + '-qr-input').value = "";
+	ccc[symbol].qrCode.makeCode("");
+	
+	if (D(symbol + "-editpanel").style.maxHeight != "0px") toggleEdit(symbol);
+	
+	//D(symbol + "-gray").style.filter = "opacity(0.5)";
+	D(symbol + "-gray").style.display = "none";
+	D(symbol + "-gray2").style.display = "none";
+	D('donateButton').disabled = true;
+	D('view').disabled = true;
+	
+	D(symbol + '-invoice-url').href = "";
+	flash(D(symbol + '-invoice-url-literal'), "\xa0");
+	
+	localStorage.removeItem(`${symbol}-seed`); 
+	localStorage.removeItem(`${symbol}-index`); 
+	localStorage.removeItem(`${symbol}-address`); 
+}
+
+
+function prepareTotal(elt) {
+	let symbol = D('primary').value;
+	addTotal(D(symbol + "-itemize"));
+	
+	if (D(symbol + "-withdrawal-amount").value)
+		D(symbol + '-withdrawal-amount-total').value = unitFromRaw(symbol, BigInt(rawFromUnit(symbol, D(symbol + "-withdrawal-amount").value)) 
+																			+ BigInt(rawFromUnit(symbol, D(symbol + "-withdrawal-fee").value)));
+	else D(symbol + '-withdrawal-amount-total').value = "";
+	flash(D(symbol + '-withdrawal-amount-total').parentNode);
+	flash(D(symbol + '-withdrawal-amount-total'));
+																			
+	if (D(symbol + "-dest-display").textContent != D(symbol + "-dest-display-confirm").textContent) {
+		D(symbol + "-dest-display-confirm").textContent = D(symbol + "-dest-display").textContent;
+		flash(D(symbol + '-dest-display-confirm'));	
+	}
+	
+	if (D(symbol + "-withdrawal-amount").value && D(symbol + "-dest-display").textContent) D(symbol + "-paymentButton").disabled = false;
+	else D(symbol + "-paymentButton").disabled = true;
+		
+	elt.parentNode.nextElementSibling.style.maxHeight = elt.parentNode.nextElementSibling.scrollHeight + "px";
+}
+
+var invoiceWaiter;
+function makeInvoiceURL(symbol) {
+	if (invoiceWaiter) clearTimeout(invoiceWaiter);
+	invoiceWaiter = setTimeout(function() {	
+		invoiceWaiter = "";
+		let items = [];
+		for (let i = 0; i < D(symbol + "-invoice").children.length; i++) {
+			let newItem = D(symbol + "-invoice").children[i].children[0].value;
+			let newAmt = D(symbol + "-invoice").children[i].children[1].value;
+			if (newItem || newAmt) {
+				let obj = {item:newItem};
+				obj[symbol] = newAmt;
+				items.push(obj);
+			}
+		}
+		let addresses = {};
+		addresses[symbol] = ccc[symbol].address;
+		D(symbol + '-invoice-url').href = makePaymentURL(symbol, addresses, items);
+		flash(D(symbol + '-invoice-url'));
+		flash(D(symbol + '-invoice-url-literal'), makePaymentURL(symbol, addresses, items));
+	}, 500);
+}
+
+function refreshBalance(symbol) {
+	return ccc[symbol].getAccountInfo().then(function(accountInfo) {
+		if (accountInfo) {
+			if (ccc[symbol].address == localStorage.getItem(`${symbol}-address`)) localStorage.setItem(`${symbol}-info`, JSON.stringify(accountInfo));	
+			if (D('msg').textContent.indexOf('Unable to connect to network.') != -1) showMsg(`Connected.`);
+		} else {
+			if (ccc[symbol].address == localStorage.getItem(`${symbol}-address`)) accountInfo = localStorage.getItem(`${symbol}-info`);
+			if (accountInfo) accountInfo = JSON.parse(accountInfo);
+		}
+		
+		if (accountInfo) {
+			if (!paymentWindow && accountInfo.representative && D(`${symbol}-rep`) && D(`${symbol}-rep`).textContent != accountInfo.representative) {
+				flash(D(`${symbol}-rep`), accountInfo.representative);	
+				fetchDisplayName(symbol, "-rep-display", accountInfo.representative, true);
+			}
+			if (accountInfo.balance !== undefined) flash(D(`${symbol}-balance`), unitFromRaw(symbol, accountInfo.balance));
+			if (accountInfo.pending !== undefined) flash(D(`${symbol}-balance-pending`), unitFromRaw(symbol, accountInfo.pending));
+			
+			if (accountInfo.detail == "Unopened account.") {
+				if (symbol == "XNO" || symbol == "BAN") cyclePending(symbol);
+			}
+		}
+		
+		return accountInfo;
+	});	
+}
+
+function cyclePending(symbol, elt) {
+	console.error("Cycling");
+	if (ccc[symbol].address) {
+		if (elt) {
+			showMsg(`Collecting arriving ${symbol}...`, null,true);
+			elt.disabled = true;
+		}
+		ccc[symbol].getPending().then(async function(data) {
+			if (data) {
+				let count = 0;
+				for (const block in data.blocks) {
+					await ccc[symbol].receive(block);
+					count++;
+				}
+				if (count) {
+					ccc[symbol].getTransactions();	
+					refreshBalance(symbol);
+					D(`${symbol}-balance-pending`).textContent = "0.00";
+					if (elt) showMsg("Arriving " + symbol + " collected.");	
+				} else if (elt) showMsg("No arriving " + symbol + " found.");
+			}
+			if (elt) elt.disabled = false;
+		});		
+	} 
+}
+
+async function withdraw(symbol, elt) {
+	elt.disabled = true;
+	let amt = D(`${symbol}-withdrawal-amount-total`).value;
+	let totalAmt = BigInt(rawFromUnit(symbol, amt));
+	let balance = BigInt(rawFromUnit(symbol, D(`${symbol}-balance`).textContent));
+	if (totalAmt <= balance) {
+		if (totalAmt + BigInt(rawFromUnit(symbol, ccc[symbol].min)) <= balance) {	
+			showMsg(symbol + " transfer initiated...", null, true);
+			let sendResp = await ccc[symbol].sendTo(D(`${symbol}-dest`).value, (totalAmt - BigInt(rawFromUnit(symbol, D(symbol + '-withdrawal-fee').value))).toString());
+			if (sendResp) {
+				console.log(sendResp);						
+				let receipt = [];
+				for (let i = 0; i < D(symbol + "-itemize").children.length; i++) {
+					let newItem = D(symbol + "-itemize").children[i].children[0].value;
+					let newAmt = D(symbol + "-itemize").children[i].children[1].value;
+					if (newItem || newAmt) {
+						receipt.push({item:newItem, amt:newAmt});
+					}
+				}
+				ws.emit("setReceiptCue", {currency: symbol, tx:sendResp, receipt:JSON.stringify(receipt)});
+				
+				showMsg(amt + " " + symbol + " transferred.");
+				refreshBalance(symbol);
+				
+				if (!paymentWindow) {
+					ccc[symbol].getTransactions();
+					clearPayment(symbol);
+				} else {
+					freezePayment(symbol, true);						
+					let sp = make('div');
+					sp.textContent = "Thank you!";
+					sp.style.marginTop = "15px";
+					D(symbol + "-paymentButton").parentNode.insertBefore(sp, D(symbol + "-paymentButton"));
+					
+					if (window.opener) {
+						window.opener.postMessage({cue:"paidCue", id:sendResp});
+						D(symbol + "-paymentButton").textContent = "Close Window";
+						D(symbol + "-paymentButton").nextElementSibling.style.display = "none"; 
+						D(symbol + "-paymentButton").parentNode.parentNode.style.maxHeight = D(symbol + "-paymentButton").parentNode.parentNode.scrollHeight + "px";					
+						D(symbol + "-paymentButton").onclick = function() {
+							if (window.opener) window.opener.postMessage({cue:"closeCue", id:sendResp});
+							setTimeout(function() { 
+								sp.textContent = "Thank you! You may now close this window.";
+								D(symbol + "-paymentButton").style.display = "none"; 
+								D(symbol + "-paymentButton").nextElementSibling.style.display = "none"; 
+							}, 1500);
+						};
+					} else {
+						sp.textContent = "Thank you! You may now close this window.";
+						D(symbol + "-paymentButton").style.display = "none"; 
+						D(symbol + "-paymentButton").nextElementSibling.style.display = "none"; 
+					}
+				}
+			}
+			elt.disabled = false; 
+			return true;
+		} else showMsg("Minimum account balance is " + ccc[symbol].min + " " + symbol + ".");
+	} else showMsg("Insufficient funds.");
+	flash(D(`${symbol}-withdrawal-amount-total`));
+	flash(D(`${symbol}-withdrawal-amount-total`).parentNode);
+	elt.disabled = false;
+}
+
+async function setRep(symbol, elt) {
+	if (!ccc[symbol].checkAddress(D(`${symbol}-rep`).textContent)) showMsg("\"Open\" the account first by receiving funds.");
+	else if (!ccc[symbol].checkAddress(D(`${symbol}-new-rep`).value)) showMsg("Invalid address.");
+	else {
+		elt.disabled = true;
+		showMsg("Updating representative...", null,true);
+		await ccc[symbol].changeRep(D(`${symbol}-new-rep`).value);
+		showMsg("Representative updated.");
+		refreshBalance(symbol);
+		elt.disabled = false;
+	}
+}
+
+function suggestRep(symbol) {
+	return fetch(ccc[symbol].repRec).then(function(response) {
+		return response.json().then(function(data) { 
+			if (data) {
+				data.sort(function(x, y) { return y.score - x.score; });
+				let repAddr = data[0].account;
+				if (!repAddr) repAddr = data[0].address;
+				if (repAddr) {
+					ccc[symbol].representative = repAddr;
+					D(`${symbol}-new-rep`).value = repAddr;
+					flash(D(`${symbol}-new-rep`));
+					fetchDisplayName(symbol, '-new-rep-display', repAddr, true);
+				}
+			}
+		});
+	}).catch(function() {networkFailMsg();});
+}
+
+function toggleVisibility(symbol) {
+	let x = D(`${symbol}-seed`);
+	if (x.type === "password") {
+		x.type = "text";
+		D(symbol + '-show').classList.add('active');
+	} else {
+		x.type = "password";		
+		D(symbol + '-show').classList.remove('active');
+	}
+}
+
+function toggleEdit(symbol) {
+	let obj = D(symbol + "-editpanel");
+	if (obj.style.maxHeight == "0px") {
+     	obj.style.maxHeight = obj.scrollHeight + "px";
+     	obj.style.marginTop = "10px";
+     	obj.style.marginBottom = "20px";
+	} else {	
+      	obj.style.maxHeight = "0px";
+     	obj.style.marginTop = "0px";
+     	obj.style.marginBottom = "0px";
+		D(symbol + "-set-display").value = "";	
+	}
+}
+
+function toggleAccount() {
+	let symbol = D('primary').value;
+	let obj = D(symbol + "-tool1");
+	let seed = localStorage.getItem(`${symbol}-seed`);
+	if (D(`${symbol}-seed`).type != "password") toggleVisibility(symbol);
+	
+	if (obj.style.maxHeight == "0px") {	
+		if (seed) {
+			D(`${symbol}-seed`).value = seed;
+			D(`${symbol}-generateButton`).disabled = true;
+			let index = localStorage.getItem(`${symbol}-index`);
+			if (index && index != "0") D(`${symbol}-index`).value = index; 
+		}
+	
+     	obj.style.maxHeight = obj.scrollHeight + "px";
+		obj.style.padding = "";
+		obj.style.marginTop = "5px";
+		D('account').classList.add('active');
+		setTimeout(function() { if (obj.style.maxHeight != "0px") obj.style.maxHeight = ""; }, 100);
+	} else {	
+		obj.style.maxHeight = obj.scrollHeight + "px";
+		qrclose();
+		setTimeout(function() {
+			obj.style.maxHeight = "0px";
+			obj.style.paddingTop = "0px";
+			obj.style.paddingBottom = "0px";
+			obj.style.marginTop = "0px";
+			obj.value = "";
+			D('account').classList.remove('active');
+		}, 1);
+	}
+}
+
+function toggleQuote() {
+	let obj = D("advancedQuote");
+	if (obj.style.maxHeight == "0px") {
+     	obj.style.maxHeight = obj.scrollHeight + "px";
+     	obj.style.marginTop = "15px";
+	} else {	
+      	obj.style.maxHeight = "0px";
+     	obj.style.marginTop = "0px";	
+	}
+}
+
+function toggleInvoices(elt, symbol) {
+	if (elt.classList.contains('active')) {
+		if (elt.textContent == "Invoices") elt.textContent = "Receipts";
+		else {
+			elt.classList.remove('active');
+			elt.textContent = "Invoices";
+		}
+	} else elt.classList.add('active');
+	filterTransactions(symbol);
+}
+
+function toggleView() {
+	if (fullView) {
+		fullView = false;
+		localStorage.removeItem("view");
+		D('view').classList.remove('active');
+	} else {
+		fullView = true;
+		localStorage.setItem("view", "true");
+		D('view').classList.add('active');
+	}
+	updateView();
+}
+
+function updateView() {
+	let symbol = D('primary').value;	
+	let obj = D(symbol + "-tool2");
+	let obj3 = D(symbol + "-tool3");
+	let obj4 = D(symbol + "-tool4");
+	if (fullView) {
+     	obj.style.maxHeight = obj.scrollHeight + "px";
+		obj.style.padding = "";
+		obj.style.marginTop = "20px";
+		
+     	obj3.style.maxHeight = obj3.scrollHeight + "px";
+		obj3.style.paddingTop = "";	
+		obj3.style.paddingBottom = "25px";	
+		obj3.style.marginTop = "";
+		
+     	obj4.style.maxHeight = obj4.scrollHeight + "px";
+		obj4.style.padding = "";	
+		obj4.style.marginTop = "20px";	
+		setTimeout(function() { if (obj4.style.maxHeight != "0px") obj4.style.maxHeight = ""; }, 100);
+	} else {
+      	obj.style.maxHeight = "0px";
+		obj.style.paddingTop = "0px";
+		obj.style.paddingBottom = "0px";
+		obj.style.marginTop = "0px";	
+		
+      	obj3.style.maxHeight = "0px";
+		obj3.style.paddingTop = "0px";
+		obj3.style.paddingBottom = "0px";	
+		obj3.style.marginTop = "0px";		
+
+		if (obj4.style.maxHeight != "0px") obj4.style.maxHeight = obj4.scrollHeight + "px";
+		setTimeout(function() {		
+			obj4.style.maxHeight = "0px";
+			obj4.style.paddingTop = "0px";
+			obj4.style.paddingBottom = "0px";	
+			obj4.style.marginTop = "0px";
+		}, 1);
+	}
+}
+function addTotal(elt) {
+	if (elt == D(D('primary').value + "-itemize")) D(D('primary').value + "-paymentButton").disabled = true;
+	else makeInvoiceURL(D('primary').value);
+	let symbol = D('primary').value;
+	let totalDiv = elt.nextElementSibling.lastElementChild;
+	let total = BigInt(rawFromUnit(symbol, 0));
+	for (let i = 0; i < elt.children.length; i++) {
+		if (elt.children[i].children[1].validationMessage == "Please enter a number." || elt.children[i].children[1].value < 0) {
+			totalDiv.value = "";
+			showMsg("Enter a positive value.");
+			flash(elt.children[i].children[1]);
+			return false;
+		} else total += BigInt(rawFromUnit(symbol, elt.children[i].children[1].value));
+	}
+	if (total) totalDiv.value = unitFromRaw(symbol, total);
+	else totalDiv.value = "";
+}
+
+function amtInputHandler(event, elt) {
+	if (event.keyCode == 27) elt.value = '';
+	if (event.keyCode == 13 && elt.parentNode == elt.parentNode.parentNode.lastElementChild) addItem(elt.parentNode.parentNode);
+	addTotal(elt.parentNode.parentNode); 
+}
+
+function addItem(elt) {
+	if (elt.lastElementChild) {
+		elt.lastElementChild.lastElementChild.innerHTML = '&#x2715;';
+		elt.lastElementChild.lastElementChild.onclick = function() {
+			remove(this.parentNode);
+			addTotal(elt);
+		};
+	}
+	
+	let urlString = "";
+	let symbol = D('primary').value;
+	if (D(symbol + "-invoice").contains(elt)) urlString = "makeInvoiceURL('" + symbol + "');";
+	let outerElt = make('div');
+	outerElt.style = "display:flex; justify-content:space-between; margin-top:15px; align-items:baseline";
+	outerElt.innerHTML = '<input placeholder="Item, memo, tip..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = ' + "''; " + urlString + '" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128"><input placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0"><button tabindex="-1" style="font-size:0.8em" onclick="addItem(this.parentNode.parentNode)">&#65291;</button>';
+
+	elt.appendChild(outerElt);
+	outerElt.children[0].focus();
+}
+
+function donate() {
+	let symbol = D('primary').value;
+	if (fullView) D(symbol + "-dest").parentNode.scrollIntoView({block:"center", behavior:"auto"});
+	D(symbol + "-dest").value = ccc[symbol].donation;
+	flash(D(symbol + "-dest"));
+	fetchDisplayName(symbol, '-dest-display', D(symbol + "-dest").value, true);
+}
+
+function toggleWipe() {
+	if (wipeKeys) {
+		wipeKeys = false;
+		localStorage.removeItem("wipe");
+		D("wipeButton").classList.remove('active');		
+	} else if (confirm("This security setting clears your private keys before any updates are installed. This is a good idea, but updates may arrive without advance notice. Ensure your keys are backed up elsewhere.")) {
+		wipeKeys = true;
+		localStorage.setItem("wipe", "true");
+		D("wipeButton").classList.add('active');
+	}
+}
+
+function toggleImage() {
+	if (localStorage.getItem("image")) {
+		D('preview').src = "";
+		D('preview').style.display = "none";
+		D('quote').style.display = "";
+		D("imageButton").classList.remove('active');
+		D("imageButton").textContent = "Select Security Image";
+		localStorage.removeItem("image");
+	} else D('filetag').click();
+}
+
+var currentElt;
+
+function scrollPanel(elt) {
+	if (screen.width <= 550 || screen.height <= 550 && ccc[D('primary').value].address) {
+		currentElt = elt;
+		setTimeout(function() {currentElt = null;}, 1000);
+	}
+}
+
+if (screen.width <= 550 || screen.height <= 550) {
+	window.addEventListener("resize", function() {
+		if (currentElt) currentElt.scrollIntoView({block:'nearest', behavior:'smooth'});	
+	});
+}
+
+function closeCopy(obj) {
+	if (obj.value.length > 0) inputEvent(obj, "");
+	else if (navigator.clipboard.readText) navigator.clipboard.readText().then(function(text) { inputEvent(obj, text); })
+																		 .catch(function() { inputEvent(obj, clipboardText); });
+	else if (clipboardText) inputEvent(obj, clipboardText);
+}
+
+function twoDigit(str) {
+	if (!str) return str;
+	let parts = str.toString().split(".");
+	let whole = parts[0];
+	let fraction = '';
+	if (parts.length > 1) fraction = parts[1];
+	while (fraction.length < 2) {
+		fraction += '0';
+	}
+	return `${whole}.${fraction}`;	
+}
+
+function unitFromRaw(symbol, str) {
+	let shift = ccc[symbol].shift;
+	let n = str.toString();	
+	while (n.length < shift + 1) {
+		n = '0' + n;
+	}
+	let whole = n.substring(0, n.length - shift);
+	let cut = 0;
+	while (n[n.length - 1 - cut] == '0' && cut < shift - 2) cut++;
+	let fraction = n.substring(n.length - shift, n.length - cut);	
+	return whole + '.' + fraction;	
+}
+
+function rawFromUnit(symbol, str) {
+	let shift = ccc[symbol].shift;
+	let parts = str.toString().split(".");	
+	let whole = parts[0];
+	let fraction = '';
+	if (parts.length > 1) fraction = parts[1];
+	while (fraction.length < shift) {
+		fraction += '0';
+	}
+	return `${whole}${fraction}`;
+}
+
+function filterTransactions(symbol) {
+	let item = D(symbol + "-filter").value.toLowerCase();
+	let ul = D(symbol + "-transactions");
+	for (let i = 0; i < ul.children.length; i++) {
+		filterLi(ul.children[i], item, symbol);
+	}
+}
+
+function filterLi(li, item, symbol) {
+	let restricted = D(symbol + "-invoice-filter").classList.contains('active');
+	if (restricted && li.children[1].children[1].textContent + 's' != D(symbol + "-invoice-filter").textContent) li.style.display = "none";
+	else {
+		let displayName = li.children[0].children[0].textContent.toLowerCase();
+		let address = li.children[1].children[0].children[0].textContent.toLowerCase();
+		if (displayName.indexOf(item) != -1 || address.indexOf(item) != -1) li.style.display = "";
+		else li.style.display = "none";
+	}
+}
+
+//////////////////////////////////////////////////////// QR helper functions
+
+function qrclose() {
+	if (qrScanning) {
+		D(qrScanningSymbol + "-qrButton1").classList.remove('active');
+		D(qrScanningSymbol + "-qrButton2").classList.remove('active');
+		
+		qrScanning.hidden = true;
+		if (qrScanningType == "-dest") qrScanning.id = qrScanningSymbol + "-qr-canvas";
+		else if (qrScanningType == "-seed") qrScanning.id = qrScanningSymbol + "-qr-canvas-seed";
+		
+		qrScanning = false;		
+		qrScanningType = "";
+		
+		video.srcObject.getTracks().forEach(track => { track.stop(); });
+	}
+}
+
+window.qrcode.callback = res => {
+	if (res) {
+		if (D(qrScanningSymbol + qrScanningType)) {
+			if (qrScanningType == "-dest") {
+				const nano_scheme = /^(nano):.+$/g;
+				if (ccc[qrScanningSymbol].checkAddress(res)) {
+					inputEvent(D(qrScanningSymbol + qrScanningType), res);
+					showMsg("Destination address scanned.");
+				} else if (qrScanningSymbol == "XNO" && nano_scheme.test(res)) {
+					const url = new URL(res);
+					if (url.protocol === 'nano:' && ccc[qrScanningSymbol].checkAddress(url.pathname)) {
+						inputEvent(D(qrScanningSymbol + qrScanningType), url.pathname);
+						D(qrScanningSymbol + "-withdrawal-amount").value = unitFromRaw('XNO', url.searchParams.get('amount'));
+						showMsg("Bill scanned.");
+					}
+				} else showMsg("Not a valid address: " + res);
+			}
+			
+			if (qrScanningType == "-seed") {
+				if (ccc[qrScanningSymbol].checkSeed(res)) {
+					inputEvent(D(qrScanningSymbol + qrScanningType), res);
+					showMsg("Scanned a " + ccc[qrScanningSymbol].keyType + ".");
+				} else showMsg("Not a valid " + ccc[qrScanningSymbol].keyType + ": " + res);
+			}
+		}
+		qrclose();
+	}
+};
+
+function qrscan(symbol, type, elt) {
+	if (!qrScanning) {
+		elt.disabled = true;
+		navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function(stream) {
+			elt.disabled = false;
+			D(symbol + "-qrButton1").classList.add('active');
+			D(symbol + "-qrButton2").classList.add('active');
+			
+			if (type == "-dest") qrScanning = D(symbol + "-qr-canvas");
+			if (type == "-seed") qrScanning = D(symbol + "-qr-canvas-seed");
+			qrScanningType = type;
+			qrScanningSymbol = symbol;
+			
+			qrScanning.hidden = false;
+			qrScanning.id = "qr-canvas";
+			
+			video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+			video.srcObject = stream;
+			video.play();
+			
+			const canvas = qrScanning.getContext("2d");
+			tick();
+			scan();
+			
+			if (screen.width <= 550 || screen.height <= 550) {
+				qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});
+				setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 200);
+				setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 400);
+				setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 600);
+			}
+			
+			function tick() {
+				if (qrScanning) {
+					qrScanning.height = video.videoHeight;
+					qrScanning.width = video.videoWidth;
+					canvas.drawImage(video, 0, 0, qrScanning.width, qrScanning.height);
+					if (qrScanning) requestAnimationFrame(tick);
+				}
+			}
+
+			function scan() {
+				if (qrScanning) {
+					try { window.qrcode.decode();} 
+					catch (e) { setTimeout(scan, 300);}
+				}
+			}
+		});
+	} else qrclose();
+}
+
+function addressQR(symbol) {
+	if (ccc[symbol].address) {
+		inputEvent(D(symbol + '-qr-input'), ccc[symbol].address);
+		flash(D(symbol + '-qr-input'));
+		ccc[symbol].qrCode.makeCode(ccc[symbol].address);
+	}
+}
+
+function generateQR(symbol, input) {	
+	if (ccc[symbol].checkSeed(input)) {
+		D(symbol + '-type-display').textContent = ccc[symbol].keyType;		
+		fetchDisplayName(symbol, '-directory-display', ccc[symbol].addressFromSeed(input, true));
+	} else if (ccc[symbol].checkAddress(input)) {
+		D(symbol + '-type-display').textContent = 'public address';
+		fetchDisplayName(symbol, '-directory-display', input, true);
+	} else {
+		D(symbol + '-type-display').textContent = '';
+		D(symbol + '-directory-display').textContent = '';
+	}
+	if (input) ccc[symbol].qrCode.makeCode(input); 
+	else ccc[symbol].qrCode.makeCode('');
+}
+
+//////////////////////////////////////////////////////// General helper functions
+
+function hideServerMsg() {
+	D('serverMsg').parentNode.style.display = "none";
+	localStorage.setItem("serverMsg", D('serverMsg').textContent);
+}
+
+function enqueue(symbol, func) {
+	ccc[symbol].queue = ccc[symbol].queue.then(func);
+	return ccc[symbol].queue;
+}
+
+function confirmBlock(symbol, hash) {
+	return new Promise(async function(resolve, reject) {
+		let firstBlockInfo = await ccc[symbol].getBlock(hash);
+		if (firstBlockInfo && firstBlockInfo.confirmed == "true") resolve(firstBlockInfo);
+		else {
+			let counter = 0;
+			waitCheckHash();
+			function waitCheckHash() {
+				setTimeout(async function() {
+					let blockInfo = await ccc[symbol].getBlock(hash);
+					if (blockInfo && blockInfo.confirmed == "true") resolve(hash);
+					else if (counter < 15) {
+						counter++;
+						waitCheckHash();
+					} else {
+						showMsg("Transfer seems to have failed or is delayed.");
+						resolve();
+					}
+				}, 1000);
+			}
+		}
+	});
+}
+
+var msgTimer;
+function showMsg(str, bold, hold) {
+	let e = new Date();
+	D('msg').style.display = "";
+	D('msg').style.transition = "";
+	if (msgTimer) clearTimeout(msgTimer);
+	D('msg').style.filter = "opacity(0.9)";
+	flash(D('msg'), e.toLocaleTimeString() + ": " + str);
+	if (bold) D('msg').style.backgroundColor = "#F00";
+	if (!hold) msgTimer = setTimeout(function() {
+		D('msg').style.transition = "filter 2s linear 0s";
+		D('msg').style.filter = "opacity(0)";
+	}, 5000);
+}
+
+function unknownFailMsg() {
+	showMsg("Transfer seems to have failed or is delayed.");
+	return false;
+}
+function networkFailMsg(error) {
+	if (!error || error.message == "Network Error") showMsg("Unable to connect to network.");
+	else showMsg("Transfer seems to have failed or is delayed.");
+	return false;
+}
+
+function flash(elt, str) {
+	if (elt) {
+		if (str != undefined) elt.textContent = str;
+		elt.style.backgroundColor = ccc[D('primary').value].flashColor;	
+		setTimeout(function() {	elt.style.backgroundColor = "white";}, 500);
+	} else console.log("Element disappeared before display.");
+}
+
+function clearDOM(myNode) {	
+	while (myNode.firstChild) {
+		myNode.removeChild(myNode.lastChild);
+	}
+}
+
+function remove(element) { element.parentNode.removeChild(element);}
+
+function make(string, myClass) { 
+	let myObj = document.createElement(string);
+	if (myClass) myObj.classList.add(myClass);
+	return myObj;
+}
+
+function clickCopy(elt, str) {
+	if (str.length > 1) {
+		/* Copy the text inside the text field */
+		navigator.clipboard.writeText(str);
+		clipboardText = str;
+		showMsg("Copied to clipboard.");
+	}
+	flash(elt);
+}
+
+function addOrdered(li, element) {
+	for (let j = 0; j < element.children.length; j++) {
+		if (parseFloat(li.title) > parseFloat(element.children[j].title)) {
+			element.insertBefore(li, element.children[j]);
+			return true;
+		}
+	}
+	element.appendChild(li);
+}
+
+function inputEvent(obj, value) {
+	obj.value = value;
+	obj.dispatchEvent(new Event('input', {bubbles:true}));
+}
+
+function byteArrayToHex(byteArray) {
+  if (!byteArray) return '';
+  let hexStr = '';
+  for (let i = 0; i < byteArray.length; i++) {
+    let hex = (byteArray[i] & 0xff).toString(16)
+    hex = hex.length === 1 ? `0${hex}` : hex;
+    hexStr += hex;
+  }
+  return hexStr.toUpperCase()
+}
+
+function hexToByteArray(hex) {
+  if (!hex) return new Uint8Array();
+  const a = [];
+  for (let i = 0; i < hex.length; i += 2) {
+    a.push(parseInt(hex.substr(i, 2), 16));
+  }
+  return new Uint8Array(a);
+}
+
+function post(url, params) {
+    return new Promise((resolve, reject) => {
+        let xhttp = new XMLHttpRequest();
+        xhttp.timeout = 10*1000; // 10 seconds
+        xhttp.onreadystatechange = function() {
+			if (this.readyState == 4) {
+				if (this.status == 200) {
+					try { resolve(JSON.parse(this.responseText)); } 
+					catch(e) {
+						console.error('Failed to parse response from node');
+						console.error(this.responseText);
+						resolve();
+					}
+				} else {
+					console.log('Failed to connect to '+ url);
+					networkFailMsg();
+					resolve();
+				}
+			}
+        };
+        xhttp.open("POST", url, true);
+        xhttp.setRequestHeader("Content-Type", "application/json");
+        xhttp.send(JSON.stringify(params));
+    });
+}	
+ 
+function npr() {
+    if (D('audio').paused) {
+		D('nprButton').classList.add('active');
+    	D('audio').load();
+    	D('audio').play();
+    } else {
+		D('nprButton').classList.remove('active');
+		D('audio').pause();
+	}
+}
+	
+async function selectPrimary(symbol) {
+	localStorage.setItem('symbol', symbol);
+	qrclose();
+	D('firstDiv').style.backgroundColor = ccc[symbol].bgColor;
+	D('donateButton').disabled = true;
+	D('view').disabled = true;
+	
+	D('quoteDisplay').style.display = "none";
+	D('firstDiv').insertBefore(D('quoteDisplay'), D('firstDiv').children[0]);	
+	
+	if (D('sidebarEltDOM')) {
+		D('firstDiv').removeChild(D('sidebarEltDOM'));
+		D('secondDiv').removeChild(D('secondDiv').lastElementChild);
+	}
+	D('firstDiv').insertBefore(ccc[symbol].sidebarElt, D('firstDiv').lastElementChild);
+	D('secondDiv').appendChild(ccc[symbol].transactionElt);
+	
+	D(symbol + "-tool1").insertBefore(D('quoteDisplay'), D(symbol + "-tool1").children[0]);
+	D('quoteDisplay').style.display = "";
+	
+	if (D(symbol + '-tool1').style.maxHeight != "0px") D('account').classList.add('active');
+	else D('account').classList.remove('active');
+	
+	if (ccc[symbol].faucet) D(`${symbol}-faucet`).style.display = "";
+	if (!ccc[symbol].qrCode) {
+		ccc[symbol].qrCode = new QRCode(symbol + "-qrCodeImageBlock");
+		addItem(D(symbol + "-itemize"));
+		addItem(D(symbol + "-invoice"));	
+		D(symbol + '-withdrawal-fee').value = unitFromRaw(symbol, ccc[symbol].fee);		
+	
+		if (symbol != "XNO" && symbol != "BAN") {
+			D(`${symbol}-index`).style.display = "none";
+			D(`${symbol}-tool2`).style.display = "none";
+			D(`${symbol}-arriving-balance-panel`).style.display = "none";
+		} else {
+			D(`${symbol}-seed`).maxLength = "64";
+			D(`${symbol}-seed`).placeholder = "Seed (store securely) ...";
+			D(`${symbol}-generateButton`).textContent = "Generate Seed";
+		}
+	}
+	
+	let waitSymbol = symbol;
+	if (waitSymbol == 'BAN') waitSymbol = 'XNO';	
+	if (!D(waitSymbol)) {
+		let script = make("script");
+		script.type = "text/javascript";
+		script.src = waitSymbol.toLowerCase() + ".js";
+		script.id = waitSymbol;
+		document.body.appendChild(script);		
+	}	
+	let waitScript = new Promise(function(resolve, reject) { resolve(true); });	
+	if (D(waitSymbol).title != "done") waitScript = new Promise(function(resolve, reject) { 
+		D(waitSymbol).addEventListener('load', function() {
+			if (waitSymbol == "SOL") ccc['SOL'].server = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl(ccc['SOL'].server), 'confirmed');
+			if (waitSymbol == "XLM") ccc['XLM'].server = new StellarSdk.Server(ccc['XLM'].server);
+			D(waitSymbol).title = "done";
+			resolve(); 
+		});
+	});
+	await waitScript;
+	
+	if (ccc[symbol].address) {
+		refreshBalance(symbol);
+		ccc[symbol].getTransactions();	
+		if (D(symbol + '-tool1').style.maxHeight != "0px") toggleAccount();
+		updateView();		
+		D('donateButton').disabled = false;
+		D('view').disabled = false;			
+		makeInvoiceURL(symbol);
+	} else if (localStorage.getItem(`${symbol}-seed`)) {
+		D(`${symbol}-seed`).value = localStorage.getItem(`${symbol}-seed`);
+		let index = localStorage.getItem(`${symbol}-index`);
+		if (index && index != "0") D(`${symbol}-index`).value = index; 
+		importWallet(symbol);
+	} else if (D(symbol + '-tool1').style.maxHeight == "0px") toggleAccount();
+	
+	return true;
+}
+			
+function generateHTML(symbol) {
+	ccc[symbol].transactionElt = make('div');
+	ccc[symbol].transactionElt.innerHTML = `	
+	<div id="${symbol}-gray2" style="display:none;">
+		<div style="max-width:620px; margin-top:30px; display:flex;justify-content:space-between">
+			
+			<input id="${symbol}-filter" placeholder="Transaction filter..." style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onkeyup="if (event.keyCode == 27) this.value = ''; filterTransactions('${symbol}');" oninput="filterTransactions('${symbol}')"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+			
+			<button id="${symbol}-invoice-filter" style="font-size:0.8em; margin-right:5px" onclick="toggleInvoices(this, '${symbol}')">Invoices</button>
+			<button style="font-size:0.8em" onclick="refreshBalance('${symbol}'); ccc['${symbol}'].getTransactions();">Refresh</button>
+		</div>
+		
+		<ul id="${symbol}-transactions" style="padding-left:0px; max-width:620px; list-style: none; margin-top:25px"></ul>
+		<div style="max-width:620px; margin-top:30px; margin-bottom:70px; text-align:center">
+			<button style="display:none" id="${symbol}-loadMore">Load More</button>
+			<div id="${symbol}-gettingStarted" style="font-size:0.9em">
+				<span style="padding-right:30px"><a href="${ccc[symbol].gettingStarted}" rel="noopener" target="_blank">${symbol} Resources</a></span>
+				<span id="${symbol}-faucet" style="display:none"><a href="${ccc[symbol].faucet}" rel="noopener" target="_blank">Free ${symbol} Faucet</a></span>
+			</div>
+		</div>
+	</div>`;
+		
+	ccc[symbol].sidebarElt = make('div');
+	ccc[symbol].sidebarElt.style.marginBottom = "40px"
+	ccc[symbol].sidebarElt.id = "sidebarEltDOM"
+	ccc[symbol].sidebarElt.innerHTML = `
+	<div id="${symbol}-tool1" class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px">
+		<div style="text-align:center;">
+		<button tabindex="-1" id="${symbol}-generateButton" style="font-size:0.8em" onclick="generateWallet('${symbol}')">Generate Key</button>
+		<button tabindex="-1" id="${symbol}-qrButton1" style="font-size:0.8em" onclick="qrscan('${symbol}', '-seed', this)">Scan QR Code</button>
+		<button style="font-size:0.8em" onclick="if (confirm('Clear all data for ${symbol}, including the current ' + ccc['${symbol}'].keyType + '?'))
+													{ clickClearWallet('${symbol}'); showMsg('${symbol} account cleared.'); }">Clear Account</button>
+		</div>
+		<div style="display:flex; justify-content:space-between; margin-top:15px;">
+			<input onfocus="scrollPanel(this)" placeholder="Private key (store securely) ..." id="${symbol}-seed" style="padding-right:30px; flex-grow:1; flex-basis:20px; margin-right:10px;" type="password" autocomplete="off" onclick="this.select()" oninput="importWallet('${symbol}'); D('${symbol}-generateButton').disabled = (this.value.length != 0);">
+			<button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+			<div>
+				<button id="${symbol}-show" tabindex="-1" style="font-size:0.8em" onclick="toggleVisibility('${symbol}')">Show</button>
+			</div>			
+		</div>
+		<canvas style="width:100%; margin-top:10px;" hidden="" id="${symbol}-qr-canvas-seed"></canvas>
+		<input onfocus="scrollPanel(this)" placeholder="Account index (default 0; or 1, 2, 3, etc) ..." id="${symbol}-index" type="number" style="margin-top:15px; width:calc(100% - 70px)" min="0" maxlength="64" onclick="this.select()" oninput="importWallet('${symbol}');">
+		<div style="text-align:center;">
+		</div>
+	</div>
+	<div id="${symbol}-gray" style="display:none;">
+	<div class="objectWrapper">
+		<div style="display:flex; align-items:center; justify-content:space-between">
+			<strong><div id="${symbol}-display" style="font-size:1.2em;" class="clickFlash" onclick="toggleEdit('${symbol}'); fetchDisplayName('${symbol}', '-display', ccc['${symbol}'].address, true)">✏️ My Account</div></strong>
+			<button style="font-size:0.8em" onclick="fetchDisplayName('${symbol}', '-display', ccc['${symbol}'].address, true); refreshBalance('${symbol}'); ccc['${symbol}'].getTransactions();">Refresh</button>
+		</div>
+		
+		<div id="${symbol}-editpanel" class="accordion" style="margin-left:10px; margin-right:10px; margin-top:10px; margin-bottom:20px">			
+			<div style="display:flex; justify-content:space-between;">
+				<input placeHolder="Public display name..." onfocus="scrollPanel(this)" id="${symbol}-set-display" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text" maxlength="64" onkeyup="if (event.keyCode == 13) setName('${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+				<button style="font-size:0.8em" onclick="setName('${symbol}')">Set</button>
+			</div>
+		</div>
+		
+		
+		<div style="margin-bottom:15px; margin-top:5px;">
+		<div class='address' id="${symbol}-address" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
+		</div>
+		
+		<div style="display:flex; align-items:center; justify-content:space-between; margin-right:5px;">
+			<div style="width:100%; display:flex">
+				<strong>Balance:&nbsp;</strong> 
+				<span id="${symbol}-balance" class="clickFlash" style="max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}
+			</div>
+		</div>
+		<div id="${symbol}-arriving-balance-panel" style="margin-top:10px; display:flex; align-items:center; justify-content:space-between">
+			<div style="width:calc(100% - 65px); display:flex">
+				<strong style="white-space:nowrap">Arriving balance:&nbsp;</strong> 
+				<span id="${symbol}-balance-pending" class="clickFlash" style="max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}&nbsp;
+			</div>
+			<button style="font-size:0.8em" onclick="cyclePending('${symbol}', this)">Collect</button>
+		</div>
+	</div>
+
+	<div class="objectWrapper">
+		<strong>Destination: </strong><span class="flash" id="${symbol}-dest-display"></span>
+		<div style="display:flex; justify-content:space-between; margin-top:5px;">
+			<input placeholder="Destination address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-dest-display', this.value); D('${symbol}-paymentButton').disabled = true;"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+			<button tabindex="-1" id="${symbol}-qrButton2" style="font-size:0.8em" onclick="qrscan('${symbol}', '-dest', this)">QR</button>
+		</div>		
+		<canvas style="width:100%; margin-top:10px;" hidden="" id="${symbol}-qr-canvas"></canvas>
+		
+		
+		<div id="${symbol}-itemize" style="margin-left:10px; margin-right:10px"></div>
+		
+		<div style="display:flex; justify-content:space-between; margin-top:15px; margin-right:5px; align-items:baseline">
+			<strong>Subtotal:&nbsp;</strong>
+			<input id="${symbol}-withdrawal-amount" placeholder="0.00" style="text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp; ${symbol}
+		</div>
+		
+		
+		
+		<div style="text-align:center;">
+			<button style="margin-top:15px;" onclick="prepareTotal(this)">Total and Summary</button>
+		</div>
+		
+		
+		<div style="max-height:0px" class="accordion">			
+			<div style="margin-left:10px; margin-right:10px">			
+				<div style="display:flex; justify-content:space-between; margin-top:10px; align-items:baseline;">
+					<input placeholder="Item, memo, tip..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = '';" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128" value="Network fee" disabled>
+					<input placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0" id="${symbol}-withdrawal-fee" disabled>
+					<button tabindex="-1" style="font-size:0.8em; filter:opacity(0)" disabled>&#65291;</button>
+				</div>
+			</div>
+					
+			<div class="flash" style="display:flex; justify-content:space-between; margin-top:5px; margin-right:5px; align-items:baseline;">
+				<strong>Total:&nbsp;</strong>
+				<input id="${symbol}-withdrawal-amount-total" placeholder="0.00" style="text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp; ${symbol}
+			</div>
+			
+			<div style="display:flex; justify-content:space-between; margin-top:5px; margin-right:5px; align-items:baseline">				
+				<strong>Destination: </strong>
+				<span class="flash" id="${symbol}-dest-display-confirm" style="text-align:right;"></span>
+			</div>
+			
+			<div style="text-align:center;">
+				<button id="${symbol}-paymentButton" style="margin-top:15px" onclick="withdraw('${symbol}', this)" disabled>Transfer ${symbol}</button>
+				<button style="margin-top:15px" onclick="clearPaymentSummary('${symbol}');">Cancel</button>
+			</div>
+		</div>
+	</div>
+		
+	
+	<div id="${symbol}-tool4" class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">
+		<strong>Invoice/bill/check generator:</strong>		
+		<div id="${symbol}-invoice" style="margin-left:10px; margin-right:10px"></div>
+		
+		<div style="display:flex; justify-content:space-between; margin-top:15px; margin-right:5px; align-items:baseline">
+			<strong>Subtotal:&nbsp;</strong>
+			<input placeholder="0.00" style="text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp; ${symbol}
+		</div>
+			
+		<div style="margin-top:15px; display:flex; align-items:center; justify-content:space-between">
+			<a class="clickFlash" target="_blank" href="" id="${symbol}-invoice-url">Payment Link</a>
+			<a style="font-size:0.8em; text-align:right" class="clickFlash" rel="noopener" target="_blank" href="https://warashibetrader.github.io/2022/02/17/invoices">Advanced Integrations</a>
+		</div>
+		<div style="margin-bottom:10px; margin-top:10px;">
+			<div class='address' style="white-space:nowrap" id="${symbol}-invoice-url-literal" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
+		</div>
+	</div>
+	
+	<div id="${symbol}-tool3" class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">
+		<strong>Device-to-device communication:</strong>
+		<div style="margin-bottom:10px; display:flex; justify-content:space-between; margin-top:10px;">
+			<input placeholder="Text to QR-encode..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-qr-input" type="text" maxlength="512" onclick="this.select()" oninput="generateQR('${symbol}', this.value)"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+			<button style="font-size:0.8em" onclick="addressQR('${symbol}')">My Address</button>
+		</div>				
+		<strong>Type: </strong><span id="${symbol}-type-display"></span>	
+		<br><strong>Owner: </strong><span class="flash" id="${symbol}-directory-display"></span>	
+		<div style="margin-top:20px; display:flex; justify-content:center" id="${symbol}-qrCodeImageBlock"></div>
+	</div>
+		
+	<div id="${symbol}-tool2" class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">
+		<strong>Current representative: </strong><span class="flash" id="${symbol}-rep-display"></span>
+		<div class="address" style="margin-bottom:10px; margin-top:5px;" id="${symbol}-rep" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
+		<strong>New representative: </strong><span class="flash" id="${symbol}-new-rep-display"></span>	
+		<div style="display:flex; justify-content:space-between; margin-top:5px;">
+			<input placeholder="New representative address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-new-rep" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-new-rep-display', this.value)" onkeyup="if (event.keyCode == 13) setRep('${symbol}', this)"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+			<button style="font-size:0.8em" onclick="suggestRep('${symbol}')">Suggest</button>
+		</div>
+		<div style="text-align:center;">
+		<button style="margin-top:15px" onclick="setRep('${symbol}', this)">Set Representative</button>	
+		</div>
+	</div>
+	
+		
+	</div>`;
+}
+
+</script>
+</html>
