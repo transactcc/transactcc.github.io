@@ -1138,6 +1138,11 @@ window.addEventListener('keydown', function(evt) {
 			toggleView();
 			//D('primary').focus();
 		}
+		if (evt.keyCode == 87) {
+			evt.preventDefault();
+			toggleAccount();
+			//D('primary').focus();
+		}
 		if (evt.keyCode == 49) {
 			evt.preventDefault();
 			//toggleView();
