@@ -902,7 +902,9 @@ setupWebsocket(ws);
 
 function setupWebsocket() {
 	ws.onopen = function() { 
-		if (ccc[D('primary').value].address) fetchDisplayName(D('primary').value, "-display", ccc[D('primary').value].address);
+		if (ccc[D('primary').value].address 
+			&& !nameCache[ccc[D('primary').value].address]
+			&& !localStorage.getItem(`${D('primary').value}-display`)) fetchDisplayName(D('primary').value, "-display", ccc[D('primary').value].address);
 	};
 	ws.onclose = function() { 
 		ws = new WebSocket(exchangeURL());
