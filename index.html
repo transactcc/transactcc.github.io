@@ -2239,20 +2239,22 @@ async function selectPrimary(symbol) {
 	});
 	await waitScript;
 	
-	if (ccc[symbol].address) {
-		refreshBalance(symbol);
-		ccc[symbol].getTransactions();	
-		if (D(symbol + '-tool1').style.maxHeight != "0px") toggleAccount();
-		updateView();		
-		D('donateButton').disabled = false;
-		D('view').disabled = false;			
-		makeInvoiceURL(symbol);
-	} else if (localStorage.getItem(`${symbol}-seed`)) {
-		D(`${symbol}-seed`).value = localStorage.getItem(`${symbol}-seed`);
-		let index = localStorage.getItem(`${symbol}-index`);
-		if (index && index != "0") D(`${symbol}-index`).value = index; 
-		importWallet(symbol);
-	} else if (D(symbol + '-tool1') && D(symbol + '-tool1').style.maxHeight == "0px") toggleAccount();
+	if (D(symbol + '-tool1')) {
+		if (ccc[symbol].address) {
+			refreshBalance(symbol);
+			ccc[symbol].getTransactions();	
+			if (D(symbol + '-tool1').style.maxHeight != "0px") toggleAccount();
+			updateView();		
+			D('donateButton').disabled = false;
+			D('view').disabled = false;			
+			makeInvoiceURL(symbol);
+		} else if (localStorage.getItem(`${symbol}-seed`)) {
+			D(`${symbol}-seed`).value = localStorage.getItem(`${symbol}-seed`);
+			let index = localStorage.getItem(`${symbol}-index`);
+			if (index && index != "0") D(`${symbol}-index`).value = index; 
+			importWallet(symbol);
+		} else if (D(symbol + '-tool1') && D(symbol + '-tool1').style.maxHeight == "0px") toggleAccount();
+	}
 	
 	return true;
 }
