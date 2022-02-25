@@ -52,8 +52,8 @@
 				<option value="ALGO">Algorand (ALGO)</option>
 			</select>	
 			<div style="position:absolute; right:0px">		
-				<button id="account" style="font-size:0.8em" onclick="toggleAccount()">Account</button>
 				<button id="view" style="font-size:0.8em;" onclick="toggleView()" disabled>All Tools</button>
+				<button id="account" style="font-size:0.8em" onclick="toggleAccount()">Account</button>
 			</div>
 		</div>		
 		
@@ -1135,12 +1135,12 @@ window.addEventListener('copy', function(e) { if (document.getSelection().toStri
 
 window.addEventListener('keydown', function(evt) {
 	if (evt.altKey) {
-		if (evt.keyCode == 87) {
+		if (evt.keyCode == 81) {
 			evt.preventDefault();
 			toggleView();
 			//D('primary').focus();
 		}
-		if (evt.keyCode == 81) {
+		if (evt.keyCode == 87) {
 			evt.preventDefault();
 			toggleAccount();
 			//D('primary').focus();
