@@ -1444,20 +1444,22 @@ function makeInvoiceURL(symbol) {
 	invoiceWaiter = setTimeout(function() {	
 		invoiceWaiter = "";
 		let items = [];
-		for (let i = 0; i < D(symbol + "-invoice").children.length; i++) {
-			let newItem = D(symbol + "-invoice").children[i].children[0].value;
-			let newAmt = D(symbol + "-invoice").children[i].children[1].value;
-			if (newItem || newAmt) {
-				let obj = {item:newItem};
-				obj[symbol] = newAmt;
-				items.push(obj);
+		if (D(symbol + "-invoice")) {
+			for (let i = 0; i < D(symbol + "-invoice").children.length; i++) {
+				let newItem = D(symbol + "-invoice").children[i].children[0].value;
+				let newAmt = D(symbol + "-invoice").children[i].children[1].value;
+				if (newItem || newAmt) {
+					let obj = {item:newItem};
+					obj[symbol] = newAmt;
+					items.push(obj);
+				}
 			}
+			let addresses = {};
+			addresses[symbol] = ccc[symbol].address;
+			D(symbol + '-invoice-url').href = makePaymentURL(symbol, addresses, items);
+			flash(D(symbol + '-invoice-url'));
+			flash(D(symbol + '-invoice-url-literal'), makePaymentURL(symbol, addresses, items));
 		}
-		let addresses = {};
-		addresses[symbol] = ccc[symbol].address;
-		D(symbol + '-invoice-url').href = makePaymentURL(symbol, addresses, items);
-		flash(D(symbol + '-invoice-url'));
-		flash(D(symbol + '-invoice-url-literal'), makePaymentURL(symbol, addresses, items));
 	}, 500);
 }
 
