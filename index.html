@@ -38,9 +38,9 @@
 			</div>
 		</div>
 		
-		<div class="objectWrapper" style="display:none">
+		<div class="objectWrapper" style="display:none; margin-bottom:10px;">
 			<div id="serverMsg" style="white-space:pre-wrap; color:red; font-style:italic; font-size:0.9em" ></div>
-			<div id="serverMsgButton" style="display:none; text-align:center; margin-top:10px; margin-bottom:15px; font-size:0.8em"><button onclick="hideServerMsg()">Hide Message</button></div>
+			<div id="serverMsgButton" style="display:none; text-align:center; margin-top:10px; font-size:0.8em"><button onclick="hideServerMsg()">Hide Message</button></div>
 		</div>
 		
 		<div style="display:flex; align-items:center; position:relative; margin-left:18px; margin-right:18px; margin-top:5px; margin-bottom:10px">	
@@ -902,9 +902,9 @@ setupWebsocket(ws);
 
 function setupWebsocket() {
 	ws.onopen = function() { 
-		if (ccc[D('primary').value].address 
-			&& !nameCache[ccc[D('primary').value].address]
-			&& !localStorage.getItem(`${D('primary').value}-display`)) fetchDisplayName(D('primary').value, "-display", ccc[D('primary').value].address);
+		let symbol = D('primary').value;
+		let address = ccc[symbol].address;
+		if (address && !nameCache[address] && !localStorage.getItem(`${symbol}-display`)) fetchDisplayName(symbol, "-display", address);
 	};
 	ws.onclose = function() { 
 		ws = new WebSocket(exchangeURL());
@@ -921,9 +921,8 @@ function setupWebsocket() {
 	};
 	ws.onmessage = function(event) {
 		let data;
-		try { 
-			data = JSON.parse(event.data); 
-		} catch { 
+		try { data = JSON.parse(event.data); }
+		catch { 
 			showMsg("Unrecognized server message.")
 			console.error(event.data);
 			return false;
@@ -982,7 +981,6 @@ function setupWebsocket() {
 	
 	
 	ws.on('getReceiptReplyCue', function(data) {
-		console.log(data);
 		if (D(data.div)) {
 			let receipt = [];
 			let but = D(data.div).parentNode.parentNode.parentNode.lastElementChild.previousElementSibling.lastElementChild;
@@ -998,7 +996,7 @@ function setupWebsocket() {
 					ul.style.maxHeight = "0px";
 					but.classList.remove('active');
 				} else {
-					ul.style.maxHeight = ul.scrollHeight + "px";
+					showAccordion(ul);
 					but.classList.add('active');
 				}
 			};
@@ -1011,8 +1009,7 @@ function setupWebsocket() {
 			itemSpan.style.fontSize = "0.8em";
 			
 			let amtSpan = make('span');
-			amtSpan.textContent = data.tx;
-			
+			amtSpan.textContent = data.tx;			
 			amtSpan.classList.add('address');
 			amtSpan.onclick = function() { clickCopy(amtSpan, amtSpan.textContent);	};			
 			
@@ -1031,18 +1028,13 @@ function setupWebsocket() {
 				let amtSpan = make('span');
 				amtSpan.textContent = twoDigit(receipt[i].amt);
 				
-				li.onmouseenter = function() {
-					this.style.backgroundColor = ccc[data.currency].flashColor;
-				};
-				li.onmouseleave = function() {
-					this.style.backgroundColor = "";
-				};
-				
+				li.onmouseenter = function() { this.style.backgroundColor = ccc[data.currency].flashColor; };
+				li.onmouseleave = function() { this.style.backgroundColor = "";	};				
 				li.appendChild(itemSpan);
 				li.appendChild(amtSpan);
 				D(data.div).parentNode.parentNode.parentNode.lastElementChild.appendChild(li);
 			}			
-			ul.style.maxHeight = ul.scrollHeight + "px";
+			showAccordion(ul);
 		} else if (!data.div) ws.emit('setReceiptCue', {currency: data.currency, tx:data.txReceive, receipt:data.receipt});
 	});
 }
@@ -1069,12 +1061,10 @@ function startPayment(preferred, addresses, items, processTransaction) {
 
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.has('preferred') && urlParams.has('addresses') && urlParams.has('items')) {
-	generateHTML(urlParams.get('preferred'));
 	loadPaymentsPage({preferred: urlParams.get('preferred'), 
 						addresses: JSON.parse(decodeURIComponent(urlParams.get('addresses'))), 
 						items: JSON.parse(decodeURIComponent(urlParams.get('items')))});
 } else {
-	for (let symbol in ccc) {generateHTML(symbol);}
 	if (localStorage.getItem('symbol')) D('primary').value = localStorage.getItem('symbol');
 	selectPrimary(D('primary').value);
 	window.addEventListener("message", function(event) { 
@@ -1087,24 +1077,16 @@ function loadPaymentsPage(data) {
 	paymentWindow = true;
 	fullView = false;
 	D('view').classList.remove('active');
+	D('view').style.display = "none";
 	let symbol = data.preferred;
 	D('primary').value = symbol;
 	D('primary').disabled = true;
 	D('secondDiv').style.display = "none";
 	D('donatePanel').style.display = "none";
-	D('view').style.display = "none";
 	if (screen.width <= 550 || screen.height <= 550) D('firstDiv').parentNode.style.width = "100%";
 	else {
-		D('firstDiv').parentNode.style.justifyContent = "center";
-		D('firstDiv').parentNode.style.backgroundColor = ccc[symbol].bgColor;
-		D('firstDiv').parentNode.style.height = "initial";
-		D('firstDiv').parentNode.style.minHeight = "100%";
-		
-		D('firstDiv').style.boxShadow = "initial";
-		D('firstDiv').style.overflow = "initial";
-		D('firstDiv').style.width = "initial";
-		D('firstDiv').style.maxWidth = "620px";
-		D('firstDiv').style.minWidth = "350px";
+		D('firstDiv').parentNode.style = "justify-content:center; height:initial; min-height:100%; background-color:" + ccc[symbol].bgColor;
+		D('firstDiv').style = "box-shadow:initial; overflow:initial; width:initial; max-width:620px; min-width:350px;";
 	}
 	
 	selectPrimary(symbol).then(function() {	
@@ -1138,16 +1120,13 @@ window.addEventListener('keydown', function(evt) {
 		if (evt.keyCode == 81) {
 			evt.preventDefault();
 			toggleView();
-			//D('primary').focus();
 		}
 		if (evt.keyCode == 87) {
 			evt.preventDefault();
 			toggleAccount();
-			//D('primary').focus();
 		}
 		if (evt.keyCode == 49) {
 			evt.preventDefault();
-			//toggleView();
 			D('primary').focus();
 		}
 	}
@@ -1248,16 +1227,10 @@ function setName(symbol) {
 function fetchDisplayName(symbol, divString, address, skipCache) {
 	if (ccc[symbol].checkAddress(address)) {
 		let displayString = nameCache[address];
-		if (!displayString) {
-			if (divString == "-display") {
-				let myDisplay = localStorage.getItem(`${symbol}-display`);
-				if (myDisplay) myDisplay = JSON.parse(myDisplay);
-				if (myDisplay && myDisplay.address == address) displayString = myDisplay.name;
-			} else if (divString == "-rep-display") {
-				let myDisplay = localStorage.getItem(`${symbol}-rep-display`);
-				if (myDisplay) myDisplay = JSON.parse(myDisplay);
-				if (myDisplay && myDisplay.address == address) displayString = myDisplay.name;
-			}
+		if (!displayString && (divString == "-display" || divString == "-rep-display")) {
+			let myDisplay = localStorage.getItem(symbol + divString);
+			if (myDisplay) myDisplay = JSON.parse(myDisplay);
+			if (myDisplay && myDisplay.address == address) displayString = myDisplay.name;
 		}
 		displayName(symbol, divString, address, displayString);
 	
@@ -1278,7 +1251,7 @@ function displayName(symbol, divString, address, displayString) {
 	} else if (divString != "-display" && address == ccc[symbol].address) displayString += " (me)";
 	if (D(symbol + divString)) {
 		flash(D(symbol + divString), displayString);
-		if (D(symbol + "-transactions").contains(D(symbol + divString))) filterLi(D(symbol + divString).parentNode.parentNode.parentNode, D(symbol + "-filter").value.toLowerCase(), symbol);
+		if (D(symbol + "-transactions").contains(D(symbol + divString))) checkli(D(symbol + divString).parentNode.parentNode.parentNode, D(symbol + "-filter").value.toLowerCase(), symbol);
 	}
 }
 
@@ -1308,21 +1281,25 @@ function importWallet(symbol) {
 		addressQR(symbol);
 		D(symbol + "-gray").style.display = "";
 		D(symbol + "-gray2").style.display = "";
-		D('donateButton').disabled = false;
-		D('view').disabled = false;				
-		if (!paymentWindow) makeInvoiceURL(symbol);
-		if (!existingWallet && D(symbol + "-tool1").style.maxHeight != "0px") toggleAccount();
-		updateView();
 		
 		if (localStorageWriteable) {
 			localStorage.setItem(`${symbol}-seed`, seed);
 			localStorage.setItem(`${symbol}-index`, index);
 			localStorage.setItem(`${symbol}-address`, ccc[symbol].address);
 		}		
-		fetchDisplayName(symbol, "-display", ccc[symbol].address, true);
-		refreshBalance(symbol);
-		ccc[symbol].getTransactions();	
+		fetchDisplayName(symbol, "-display", ccc[symbol].address, true);		
+		loadDisplay(symbol, existingWallet);
 	}
+}
+
+function loadDisplay(symbol, keepAccount) {
+	refreshBalance(symbol);
+	ccc[symbol].getTransactions();
+	updateView();
+	D('donateButton').disabled = false;
+	D('view').disabled = false;	
+	if (!paymentWindow) makeInvoiceLink(symbol);
+	if (!keepAccount && D(symbol + "-tool1").style.maxHeight != "0px") toggleAccount(symbol);
 }
 
 function clickClearWallet(symbol) {
@@ -1334,12 +1311,8 @@ function clickClearWallet(symbol) {
 	localStorage.removeItem(`${symbol}-rep-display`); 
 	localStorage.removeItem(`${symbol}-info`);
 	
-	if (!paymentWindow) clearPayment(symbol);	
-	while (D(symbol + "-invoice").children.length > 1) {
-		remove(D(symbol + "-invoice").lastElementChild);
-	}
-	D(symbol + "-invoice").lastElementChild.children[1].value = "";
-	D(symbol + "-invoice").lastElementChild.children[0].value = "";
+	if (!paymentWindow) clearPayment(symbol);
+	clearMemoList("-invoice");
 }
 
 function clearPayment(symbol) {
@@ -1347,12 +1320,15 @@ function clearPayment(symbol) {
 	D(symbol + "-dest").value = "";	
 	D(`${symbol}-withdrawal-amount`).value = "";	
 	clearPaymentSummary(symbol);
-	
-	while (D(symbol + "-itemize").children.length > 1) {
-		remove(D(symbol + "-itemize").children[0]);
+	clearMemoList("-itemize");
+}
+
+function clearMemoList(div) {
+	while (D(symbol + div).children.length > 1) {
+		remove(D(symbol + div).children[0]);
 	}
-	D(symbol + "-itemize").lastElementChild.children[1].value = "";
-	D(symbol + "-itemize").lastElementChild.children[0].value = "";
+	D(symbol + div).lastElementChild.children[1].value = "";
+	D(symbol + div).lastElementChild.children[0].value = "";
 }
 
 function clearPaymentSummary(symbol) {
@@ -1362,24 +1338,23 @@ function clearPaymentSummary(symbol) {
 }
 
 function freezePayment(symbol, finalize) {
-	for (let i = 0; i < D(symbol + "-itemize").children.length; i++) {	
-		if (D(symbol + "-itemize").children[i].children[1].value || finalize || i < D(symbol + "-itemize").children.length - 1) {
-			D(symbol + "-itemize").children[i].children[1].value = twoDigit(D(symbol + "-itemize").children[i].children[1].value);
-			D(symbol + "-itemize").children[i].children[1].disabled = true;		
-			D(symbol + "-itemize").children[i].children[1].placeholder = "-";
+	let memoList = D(symbol + "-itemize").children;
+	for (let i = 0; i < memoList.length; i++) {	
+		if (memoList[i].children[1].value || finalize || i < memoList.length - 1) {
+			memoList[i].children[1].value = twoDigit(memoList[i].children[1].value);
+			memoList[i].children[1].disabled = true;		
+			memoList[i].children[1].placeholder = "-";
 		} 
-		if (D(symbol + "-itemize").children[i].children[0].value || finalize 
-			|| (D(symbol + "-itemize").children[i].children[1].value && D(symbol + "-itemize").children[i].children[1].value != "0.00")) {
-			D(symbol + "-itemize").children[i].children[0].disabled = true;	
-			D(symbol + "-itemize").children[i].children[0].placeholder = "-";
-		} else if (D(symbol + "-itemize").children[i].children[1].value == "0.00") {
-			D(symbol + "-itemize").children[i].children[0].placeholder = "Message...";
-			D(symbol + "-itemize").children[i].children[1].value = "";
-		}
-		 
-		D(symbol + "-itemize").children[i].children[2].disabled = true;
-		D(symbol + "-itemize").children[i].children[2].style.filter = "opacity(0)";	
-		D(symbol + "-itemize").children[i].children[2].innerHTML = '&#x2715;';		
+		if (memoList[i].children[0].value || finalize || (memoList[i].children[1].value && memoList[i].children[1].value != "0.00")) {
+			memoList[i].children[0].disabled = true;	
+			memoList[i].children[0].placeholder = "-";
+		} else if (memoList[i].children[1].value == "0.00") {
+			memoList[i].children[0].placeholder = "Message...";
+			memoList[i].children[1].value = "";
+		}		 
+		memoList[i].children[2].disabled = true;
+		memoList[i].children[2].style.filter = "opacity(0)";	
+		memoList[i].children[2].innerHTML = '&#x2715;';		
 	}
 }
 
@@ -1408,7 +1383,6 @@ function clearWallet(symbol) {
 	
 	if (D(symbol + "-editpanel").style.maxHeight != "0px") toggleEdit(symbol);
 	
-	//D(symbol + "-gray").style.filter = "opacity(0.5)";
 	D(symbol + "-gray").style.display = "none";
 	D(symbol + "-gray2").style.display = "none";
 	D('donateButton').disabled = true;
@@ -1423,8 +1397,7 @@ function clearWallet(symbol) {
 }
 
 
-function prepareTotal(elt) {
-	let symbol = D('primary').value;
+function prepareTotalTab(symbol, elt) {
 	addTotal(D(symbol + "-itemize"));
 	
 	if (D(symbol + "-withdrawal-amount").value)
@@ -1442,16 +1415,14 @@ function prepareTotal(elt) {
 	if (D(symbol + "-withdrawal-amount").value && D(symbol + "-dest-display").textContent) D(symbol + "-paymentButton").disabled = false;
 	else D(symbol + "-paymentButton").disabled = true;
 		
-	elt.parentNode.nextElementSibling.style.maxHeight = elt.parentNode.nextElementSibling.scrollHeight + "px";
+	showAccordion(elt.parentNode.nextElementSibling);
 }
 
 var invoiceWaiter;
-function makeInvoiceURL(symbol) {
-	if (invoiceWaiter) clearTimeout(invoiceWaiter);
-	invoiceWaiter = setTimeout(function() {	
-		invoiceWaiter = "";
-		let items = [];
+function makeInvoiceLink(symbol) {
+	if (!invoiceWaiter) {
 		if (D(symbol + "-invoice")) {
+			let items = [];
 			for (let i = 0; i < D(symbol + "-invoice").children.length; i++) {
 				let newItem = D(symbol + "-invoice").children[i].children[0].value;
 				let newAmt = D(symbol + "-invoice").children[i].children[1].value;
@@ -1466,8 +1437,15 @@ function makeInvoiceURL(symbol) {
 			D(symbol + '-invoice-url').href = makePaymentURL(symbol, addresses, items);
 			flash(D(symbol + '-invoice-url'));
 			flash(D(symbol + '-invoice-url-literal'), makePaymentURL(symbol, addresses, items));
+			invoiceWaiter = setTimeout(function() {	invoiceWaiter = ""; }, 500);
 		}
-	}, 500);
+	} else {
+		clearTimeout(invoiceWaiter);		
+		invoiceWaiter = setTimeout(function() {	
+			invoiceWaiter = ""; 
+			makeInvoiceLink(symbol);
+		}, 500);
+	}
 }
 
 function refreshBalance(symbol) {
@@ -1498,7 +1476,6 @@ function refreshBalance(symbol) {
 }
 
 function cyclePending(symbol, elt) {
-	console.error("Cycling");
 	if (ccc[symbol].address) {
 		if (elt) {
 			showMsg(`Collecting arriving ${symbol}...`, null,true);
@@ -1533,14 +1510,12 @@ async function withdraw(symbol, elt) {
 			showMsg(symbol + " transfer initiated...", null, true);
 			let sendResp = await ccc[symbol].sendTo(D(`${symbol}-dest`).value, (totalAmt - BigInt(rawFromUnit(symbol, D(symbol + '-withdrawal-fee').value))).toString());
 			if (sendResp) {
-				console.log(sendResp);						
+				console.log(sendResp);
 				let receipt = [];
 				for (let i = 0; i < D(symbol + "-itemize").children.length; i++) {
 					let newItem = D(symbol + "-itemize").children[i].children[0].value;
 					let newAmt = D(symbol + "-itemize").children[i].children[1].value;
-					if (newItem || newAmt) {
-						receipt.push({item:newItem, amt:newAmt});
-					}
+					if (newItem || newAmt) receipt.push({item:newItem, amt:newAmt});
 				}
 				ws.emit("setReceiptCue", {currency: symbol, tx:sendResp, receipt:JSON.stringify(receipt)});
 				
@@ -1555,25 +1530,26 @@ async function withdraw(symbol, elt) {
 					let sp = make('div');
 					sp.textContent = "Thank you!";
 					sp.style.marginTop = "15px";
-					D(symbol + "-paymentButton").parentNode.insertBefore(sp, D(symbol + "-paymentButton"));
+					let payBut = D(symbol + "-paymentButton");
+					payBut.parentNode.insertBefore(sp, payBut);
 					
 					if (window.opener) {
 						window.opener.postMessage({cue:"paidCue", id:sendResp});
-						D(symbol + "-paymentButton").textContent = "Close Window";
-						D(symbol + "-paymentButton").nextElementSibling.style.display = "none"; 
-						D(symbol + "-paymentButton").parentNode.parentNode.style.maxHeight = D(symbol + "-paymentButton").parentNode.parentNode.scrollHeight + "px";					
-						D(symbol + "-paymentButton").onclick = function() {
+						payBut.textContent = "Close Window";
+						payBut.nextElementSibling.style.display = "none"; 
+						showAccordion(payBut.parentNode.parentNode);					
+						payBut.onclick = function() {
 							if (window.opener) window.opener.postMessage({cue:"closeCue", id:sendResp});
 							setTimeout(function() { 
 								sp.textContent = "Thank you! You may now close this window.";
-								D(symbol + "-paymentButton").style.display = "none"; 
-								D(symbol + "-paymentButton").nextElementSibling.style.display = "none"; 
+								payBut.style.display = "none"; 
+								payBut.nextElementSibling.style.display = "none"; 
 							}, 1500);
 						};
 					} else {
 						sp.textContent = "Thank you! You may now close this window.";
-						D(symbol + "-paymentButton").style.display = "none"; 
-						D(symbol + "-paymentButton").nextElementSibling.style.display = "none"; 
+						payBut.style.display = "none"; 
+						payBut.nextElementSibling.style.display = "none"; 
 					}
 				}
 			}
@@ -1631,44 +1607,52 @@ function toggleVisibility(symbol) {
 function toggleEdit(symbol) {
 	let obj = D(symbol + "-editpanel");
 	if (obj.style.maxHeight == "0px") {
-     	obj.style.maxHeight = obj.scrollHeight + "px";
+     	showAccordion(obj);
      	obj.style.marginTop = "10px";
      	obj.style.marginBottom = "20px";
 	} else {	
-      	obj.style.maxHeight = "0px";
-     	obj.style.marginTop = "0px";
+		hideAccordion(obj);
      	obj.style.marginBottom = "0px";
 		D(symbol + "-set-display").value = "";	
 	}
 }
 
-function toggleAccount() {
-	let symbol = D('primary').value;
-	let obj = D(symbol + "-tool1");
-	let seed = localStorage.getItem(`${symbol}-seed`);
+function showAccordion(obj) { obj.style.maxHeight = obj.scrollHeight + "px"; }
+
+function hideAccordion(obj) {
+	obj.style.maxHeight = "0px";
+	obj.style.marginTop = "0px";
+}
+
+function hideAccordionPadding(obj) {
+	obj.style.paddingTop = "0px";
+	obj.style.paddingBottom = "0px";
+}
+
+function toggleAccount(symbol) {
+	if (!symbol) symbol = D('primary').value;
 	if (D(`${symbol}-seed`).type != "password") toggleVisibility(symbol);
 	
+	let obj = D(symbol + "-tool1");
 	if (obj.style.maxHeight == "0px") {	
+		let seed = localStorage.getItem(`${symbol}-seed`);
 		if (seed) {
 			D(`${symbol}-seed`).value = seed;
 			D(`${symbol}-generateButton`).disabled = true;
 			let index = localStorage.getItem(`${symbol}-index`);
 			if (index && index != "0") D(`${symbol}-index`).value = index; 
-		}
-	
-     	obj.style.maxHeight = obj.scrollHeight + "px";
+		}	
+     	showAccordion(obj);
 		obj.style.padding = "";
 		obj.style.marginTop = "5px";
 		D('account').classList.add('active');
 		setTimeout(function() { if (obj.style.maxHeight != "0px") obj.style.maxHeight = ""; }, 100);
 	} else {	
-		obj.style.maxHeight = obj.scrollHeight + "px";
+     	showAccordion(obj);
 		qrclose();
 		setTimeout(function() {
-			obj.style.maxHeight = "0px";
-			obj.style.paddingTop = "0px";
-			obj.style.paddingBottom = "0px";
-			obj.style.marginTop = "0px";
+			hideAccordion(obj);
+			hideAccordionPadding(obj);
 			obj.value = "";
 			D('account').classList.remove('active');
 		}, 1);
@@ -1678,12 +1662,9 @@ function toggleAccount() {
 function toggleQuote() {
 	let obj = D("advancedQuote");
 	if (obj.style.maxHeight == "0px") {
-     	obj.style.maxHeight = obj.scrollHeight + "px";
+     	showAccordion(obj);
      	obj.style.marginTop = "15px";
-	} else {	
-      	obj.style.maxHeight = "0px";
-     	obj.style.marginTop = "0px";	
-	}
+	} else hideAccordion(obj);
 }
 
 function toggleInvoices(elt, symbol) {
@@ -1699,14 +1680,13 @@ function toggleInvoices(elt, symbol) {
 
 function toggleView() {
 	if (fullView) {
-		fullView = false;
 		localStorage.removeItem("view");
 		D('view').classList.remove('active');
 	} else {
-		fullView = true;
 		localStorage.setItem("view", "true");
 		D('view').classList.add('active');
 	}
+	fullView = !fullView;
 	updateView();
 }
 
@@ -1716,43 +1696,37 @@ function updateView() {
 	let obj3 = D(symbol + "-tool3");
 	let obj4 = D(symbol + "-tool4");
 	if (fullView) {
-     	obj.style.maxHeight = obj.scrollHeight + "px";
+     	showAccordion(obj);
 		obj.style.padding = "";
 		obj.style.marginTop = "20px";
 		
-     	obj3.style.maxHeight = obj3.scrollHeight + "px";
+     	showAccordion(obj3);
 		obj3.style.paddingTop = "";	
 		obj3.style.paddingBottom = "25px";	
 		obj3.style.marginTop = "";
 		
-     	obj4.style.maxHeight = obj4.scrollHeight + "px";
+     	showAccordion(obj4);
 		obj4.style.padding = "";	
 		obj4.style.marginTop = "20px";	
 		setTimeout(function() { if (obj4.style.maxHeight != "0px") obj4.style.maxHeight = ""; }, 100);
 	} else {
-      	obj.style.maxHeight = "0px";
-		obj.style.paddingTop = "0px";
-		obj.style.paddingBottom = "0px";
-		obj.style.marginTop = "0px";	
-		
-      	obj3.style.maxHeight = "0px";
-		obj3.style.paddingTop = "0px";
-		obj3.style.paddingBottom = "0px";	
-		obj3.style.marginTop = "0px";		
+		hideAccordion(obj);
+		hideAccordionPadding(obj);		
+		hideAccordion(obj3);
+		hideAccordionPadding(obj3);	
 
-		if (obj4.style.maxHeight != "0px") obj4.style.maxHeight = obj4.scrollHeight + "px";
+		if (obj4.style.maxHeight != "0px") showAccordion(obj4);
 		setTimeout(function() {		
-			obj4.style.maxHeight = "0px";
-			obj4.style.paddingTop = "0px";
-			obj4.style.paddingBottom = "0px";	
-			obj4.style.marginTop = "0px";
+			hideAccordion(obj4);
+			hideAccordionPadding(obj4);
 		}, 1);
 	}
 }
+
 function addTotal(elt) {
-	if (elt == D(D('primary').value + "-itemize")) D(D('primary').value + "-paymentButton").disabled = true;
-	else makeInvoiceURL(D('primary').value);
 	let symbol = D('primary').value;
+	if (elt == D(symbol + "-itemize")) D(symbol + "-paymentButton").disabled = true;
+	else makeInvoiceLink(symbol);
 	let totalDiv = elt.nextElementSibling.lastElementChild;
 	let total = BigInt(rawFromUnit(symbol, 0));
 	for (let i = 0; i < elt.children.length; i++) {
@@ -1784,7 +1758,7 @@ function addItem(elt) {
 	
 	let urlString = "";
 	let symbol = D('primary').value;
-	if (D(symbol + "-invoice").contains(elt)) urlString = "makeInvoiceURL('" + symbol + "');";
+	if (D(symbol + "-invoice").contains(elt)) urlString = "makeInvoiceLink('" + symbol + "');";
 	let outerElt = make('div');
 	outerElt.style = "display:flex; justify-content:space-between; margin-top:15px; align-items:baseline";
 	outerElt.innerHTML = '<input placeholder="Item, memo, tip..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = ' + "''; " + urlString + '" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128"><input placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0"><button tabindex="-1" style="font-size:0.8em" onclick="addItem(this.parentNode.parentNode)">&#65291;</button>';
@@ -1849,13 +1823,12 @@ function closeCopy(obj) {
 function twoDigit(str) {
 	if (!str) return str;
 	let parts = str.toString().split(".");
-	let whole = parts[0];
 	let fraction = '';
 	if (parts.length > 1) fraction = parts[1];
 	while (fraction.length < 2) {
 		fraction += '0';
 	}
-	return `${whole}.${fraction}`;	
+	return `${parts[0]}.${fraction}`;	
 }
 
 function unitFromRaw(symbol, str) {
@@ -1874,24 +1847,23 @@ function unitFromRaw(symbol, str) {
 function rawFromUnit(symbol, str) {
 	let shift = ccc[symbol].shift;
 	let parts = str.toString().split(".");	
-	let whole = parts[0];
 	let fraction = '';
 	if (parts.length > 1) fraction = parts[1];
 	while (fraction.length < shift) {
 		fraction += '0';
 	}
-	return `${whole}${fraction}`;
+	return `${parts[0]}${fraction}`;
 }
 
 function filterTransactions(symbol) {
 	let item = D(symbol + "-filter").value.toLowerCase();
 	let ul = D(symbol + "-transactions");
 	for (let i = 0; i < ul.children.length; i++) {
-		filterLi(ul.children[i], item, symbol);
+		checkli(ul.children[i], item, symbol);
 	}
 }
 
-function filterLi(li, item, symbol) {
+function checkli(li, item, symbol) {
 	let restricted = D(symbol + "-invoice-filter").classList.contains('active');
 	if (restricted && li.children[1].children[1].textContent + 's' != D(symbol + "-invoice-filter").textContent) li.style.display = "none";
 	else {
@@ -2189,6 +2161,7 @@ function npr() {
 	
 async function selectPrimary(symbol) {
 	localStorage.setItem('symbol', symbol);
+	if (!ccc[symbol].sidebarElt) generateHTML(symbol);
 	qrclose();
 	D('firstDiv').style.backgroundColor = ccc[symbol].bgColor;
 	D('donateButton').disabled = true;
@@ -2249,20 +2222,13 @@ async function selectPrimary(symbol) {
 	await waitScript;
 	
 	if (D(symbol + '-tool1')) {
-		if (ccc[symbol].address) {
-			refreshBalance(symbol);
-			ccc[symbol].getTransactions();	
-			if (D(symbol + '-tool1').style.maxHeight != "0px") toggleAccount();
-			updateView();		
-			D('donateButton').disabled = false;
-			D('view').disabled = false;			
-			makeInvoiceURL(symbol);
-		} else if (localStorage.getItem(`${symbol}-seed`)) {
+		if (ccc[symbol].address) loadDisplay(symbol);
+		else if (localStorage.getItem(`${symbol}-seed`)) {
 			D(`${symbol}-seed`).value = localStorage.getItem(`${symbol}-seed`);
 			let index = localStorage.getItem(`${symbol}-index`);
 			if (index && index != "0") D(`${symbol}-index`).value = index; 
 			importWallet(symbol);
-		} else if (D(symbol + '-tool1') && D(symbol + '-tool1').style.maxHeight == "0px") toggleAccount();
+		} else if (D(symbol + '-tool1') && D(symbol + '-tool1').style.maxHeight == "0px") toggleAccount(symbol);
 	}
 	
 	return true;
@@ -2366,7 +2332,7 @@ function generateHTML(symbol) {
 		
 		
 		<div style="text-align:center;">
-			<button style="margin-top:15px;" onclick="prepareTotal(this)">Total and Summary</button>
+			<button style="margin-top:15px;" onclick="prepareTotalTab('${symbol}', this)">Total and Summary</button>
 		</div>
 		
 		
