@@ -128,7 +128,7 @@ if (localStorage.getItem('symbol')) document.getElementById('firstDiv').style.ba
 'use strict';
 
 //////////////////////////////////////////////////////// global data
-
+	
 var thisURL = 'https://transactcc.github.io/';
 //var thisURL = 'https://warashibetrader.github.io/crypto/wallet';
 var paymentWindow = false;
@@ -1052,7 +1052,7 @@ function startPayment(preferred, addresses, items, processTransaction) {
 	let popup = window.open(thisURL);
 	window.addEventListener("message", function(event) { 
 		if (event.source == popup && event.data) {
-			if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred:preferred, addresses: addresses, items: items}); 
+			if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred:preferred, addresses: addresses, items: items}, "*"); 
 			if (event.data.cue == "paidCue" && processTransaction) processTransaction(event.data.id);
 			if (event.data.cue == "closeCue") popup.close();
 		}
@@ -1537,12 +1537,12 @@ async function withdraw(symbol, elt) {
 					payBut.parentNode.insertBefore(sp, payBut);
 					
 					if (window.opener) {
-						window.opener.postMessage({cue:"paidCue", id:sendResp});
+						window.opener.postMessage({cue:"paidCue", id:sendResp}, "*");
 						payBut.textContent = "Close Window";
 						payBut.nextElementSibling.style.display = "none"; 
 						showAccordion(payBut.parentNode.parentNode);					
 						payBut.onclick = function() {
-							if (window.opener) window.opener.postMessage({cue:"closeCue", id:sendResp});
+							if (window.opener) window.opener.postMessage({cue:"closeCue", id:sendResp}, "*");
 							setTimeout(function() { 
 								sp.textContent = "Thank you! You may now close this window.";
 								payBut.style.display = "none"; 
