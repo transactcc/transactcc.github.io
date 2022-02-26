@@ -1072,7 +1072,7 @@ if (urlParams.has('preferred') && urlParams.has('addresses') && urlParams.has('i
 	});
 	if (window.opener) {
 		console.log("before posting message");
-		window.opener.postMessage({cue:"readyCue"});
+		window.opener.postMessage({cue:"readyCue"}, "*");
 	}
 }
 
