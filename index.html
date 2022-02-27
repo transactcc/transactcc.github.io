@@ -6,6 +6,7 @@
 	<link rel="icon" href="strawicontrans.png">	
 	<link rel="manifest" href="manifest.json">
 	<link rel="apple-touch-icon" href="strawicontrans.png">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap"> 
 	
 	<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
 	<meta content="utf-8" http-equiv="encoding">
@@ -38,18 +39,18 @@
 			</div>
 		</div>
 		
-		<div class="objectWrapper" style="display:none; margin-bottom:10px;">
+		<div class="objectWrapper" style="display:none; margin-bottom:10px; flex-shrink:0">
 			<div id="serverMsg" style="white-space:pre-wrap; color:red; font-style:italic; font-size:0.9em" ></div>
 			<div id="serverMsgButton" style="display:none; text-align:center; margin-top:10px; font-size:0.8em"><button onclick="hideServerMsg()">Hide Message</button></div>
 		</div>
 		
-		<div style="display:flex; align-items:center; position:relative; margin-left:18px; margin-right:18px; margin-top:5px; margin-bottom:10px">	
-			<select name="primary" id="primary" onchange="selectPrimary(event.target.value)">
-				<option value="XNO">Nano (XNO)</option>
-				<option value="BAN">Banano (BAN)</option>
-				<option value="SOL">Solana (SOL)</option>
-				<option value="XLM">Stellar (XLM)</option>
-				<option value="ALGO">Algorand (ALGO)</option>
+		<div style="display:flex; align-items:center; position:relative; margin-left:18px; margin-right:18px; margin-top:5px; margin-bottom:10px; flex-shrink:0">	
+			<select name="primary" id="primary" onchange="selectPrimary(event.target.value)" style="text-align:center">
+				<option value="XNO">XNO - Nano</option>
+				<option value="BAN">BAN - Banano</option>
+				<option value="SOL">SOL - Solana</option>
+				<option value="XLM">XLM - Stellar</option>
+				<option value="ALGO">ALGO - Algorand</option>
 			</select>	
 			<div style="position:absolute; right:0px">		
 				<button id="view" style="font-size:0.8em;" onclick="toggleView()" disabled>All Tools</button>
@@ -99,7 +100,7 @@ if ('serviceWorker' in navigator) {
 					for (let symbol in ccc) {
 						ccc[symbol].privateKey = "";						
 						if (D(`${symbol}-seed`)) D(`${symbol}-seed`).value = "";
-						ccc[symbol].sidebarElt.innerHTML = "";
+						if (ccc[symbol].sidebarElt) ccc[symbol].sidebarElt.innerHTML = "";
 						console.log("Deleted " + symbol + "key.");
 					}
 				}				
@@ -128,7 +129,7 @@ if (localStorage.getItem('symbol')) document.getElementById('firstDiv').style.ba
 'use strict';
 
 //////////////////////////////////////////////////////// global data
-	
+
 var thisURL = 'https://transactcc.github.io/';
 //var thisURL = 'https://warashibetrader.github.io/crypto/wallet';
 var paymentWindow = false;
@@ -1265,7 +1266,7 @@ function generateWallet(symbol) {
 	flash(D(`${symbol}-seed`));
 	navigator.clipboard.writeText(D(`${symbol}-seed`).value);
 	clipboardText = D(`${symbol}-seed`).value;
-	showMsg("New " + ccc[symbol].keyType + " copied to clipboard. Save it securely (elsewhere and NOW).");
+	showMsg("New " + ccc[symbol].keyType + " copied to clipboard. Save it securely, elsewhere and now!");
 }
 
 function importWallet(symbol) {
@@ -1764,7 +1765,7 @@ function addItem(elt) {
 	if (D(symbol + "-invoice").contains(elt)) urlString = "makeInvoiceLink('" + symbol + "');";
 	let outerElt = make('div');
 	outerElt.style = "display:flex; justify-content:space-between; margin-top:15px; align-items:baseline";
-	outerElt.innerHTML = '<input placeholder="Item, memo, tip..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = ' + "''; " + urlString + '" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128"><input placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0"><button tabindex="-1" style="font-size:0.8em" onclick="addItem(this.parentNode.parentNode)">&#65291;</button>';
+	outerElt.innerHTML = '<input placeholder="Description..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = ' + "''; " + urlString + '" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128"><input placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0"><button tabindex="-1" style="font-size:0.8em" onclick="addItem(this.parentNode.parentNode)">&#65291;</button>';
 
 	elt.appendChild(outerElt);
 	outerElt.children[0].focus();
@@ -2342,7 +2343,7 @@ function generateHTML(symbol) {
 		<div style="max-height:0px" class="accordion">			
 			<div style="margin-left:10px; margin-right:10px">			
 				<div style="display:flex; justify-content:space-between; margin-top:10px; align-items:baseline;">
-					<input placeholder="Item, memo, tip..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = '';" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128" value="Network fee" disabled>
+					<input placeholder="Description..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = '';" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128" value="Network fee" disabled>
 					<input placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0" id="${symbol}-withdrawal-fee" disabled>
 					<button tabindex="-1" style="font-size:0.8em; filter:opacity(0)" disabled>&#65291;</button>
 				</div>
