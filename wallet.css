@@ -83,7 +83,6 @@ input[type=number]:disabled, input[type=text]:disabled {
 	border-bottom: 0px;
 	color: #333;
 	padding:0px;
-	font-size:1em;
 	opacity:1;
 }
 
