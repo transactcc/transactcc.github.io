@@ -1003,7 +1003,7 @@ function setupWebsocket() {
 			};
 			
 			let li = make('li');
-			li.style = "margin-bottom:5px; overflow:hidden; text-overflow:ellipsis;";
+			li.style = "margin-bottom:5px; overflow:hidden; text-overflow:ellipsis; padding-left:5px; padding-right:5px;";
 			
 			let itemSpan = make('span');
 			itemSpan.textContent = "ID:\xa0";
@@ -2286,7 +2286,7 @@ function generateHTML(symbol) {
 			</div>			
 		</div>
 		<canvas style="width:100%; margin-top:10px;" hidden="" id="${symbol}-qr-canvas-seed"></canvas>
-		<input onfocus="scrollPanel(this)" placeholder="Account index (default 0; or 1, 2, 3, etc) ..." id="${symbol}-index" type="number" style="margin-top:15px; width:calc(100% - 70px)" min="0" maxlength="64" onclick="this.select()" oninput="importWallet('${symbol}');">
+		<input onfocus="scrollPanel(this)" placeholder="Account index (default 0; or 1, 2, 3, etc) ..." id="${symbol}-index" type="number" style="margin-top:15px; width:calc(100% - 10px)" min="0" maxlength="64" onclick="this.select()" oninput="importWallet('${symbol}');">
 		<div style="text-align:center;">
 		</div>
 	</div>
