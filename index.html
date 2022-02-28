@@ -1445,11 +1445,15 @@ function makeInvoiceLink(symbol) {
 			D(symbol + '-invoice-url').href = makePaymentURL(symbol, addresses, items);
 			flash(D(symbol + '-invoice-url'));
 			flash(D(symbol + '-invoice-url-literal'), makePaymentURL(symbol, addresses, items));
+			D(symbol + '-invoice-url').style.opacity = "";
+			D(symbol + '-invoice-url-literal').style.opacity = "";
 			invoiceWaiter = setTimeout(function() {	invoiceWaiter = ""; }, 500);
 		}
 	} else {
-		clearTimeout(invoiceWaiter);		
-		invoiceWaiter = setTimeout(function() {	
+		clearTimeout(invoiceWaiter);
+		D(symbol + '-invoice-url').style.opacity = "0.3";
+		D(symbol + '-invoice-url-literal').style.opacity = "0.3";
+		invoiceWaiter = setTimeout(function() {
 			invoiceWaiter = ""; 
 			makeInvoiceLink(symbol);
 		}, 500);
