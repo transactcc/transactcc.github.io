@@ -44,7 +44,7 @@
 			<div id="serverMsgButton" style="display:none; text-align:center; margin-top:10px; font-size:0.85em"><button onclick="hideServerMsg()">Hide Message</button></div>
 		</div>
 		
-		<div style="display:flex; align-items:center; position:relative; margin-left:18px; margin-right:18px; margin-top:5px; margin-bottom:10px; flex-shrink:0">	
+		<div style="display:flex; align-items:center; position:relative; margin-left:18px; margin-right:18px; margin-bottom:10px; flex-shrink:0">	
 			<select name="primary" id="primary" onchange="selectPrimary(event.target.value)" style="text-align:center">
 				<option value="XNO">XNO - Nano</option>
 				<option value="BAN">BAN - Banano</option>
@@ -535,7 +535,7 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
 
 	li.innerHTML = "<div style='display:flex; justify-content:space-between'><strong style='margin-right:10px; overflow:hidden; text-overflow: ellipsis'></strong>"
 	+ "<strong style='text-align:right; overflow:hidden; text-overflow:ellipsis; color:" + color + "'>" + signSymbol + "<span class='clickFlash'></span> " + symbol + "</strong></div>"
-	+ "<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:5px'><div style='overflow:hidden'><div class='address' onclick='clickCopy(this, this.textContent)'></div>"
+	+ "<div style='display:flex; justify-content:space-between; align-items:center;'><div style='overflow:hidden'><div class='address' onclick='clickCopy(this, this.textContent)'></div>"
 	+ "<div style='font-size:0.85em; padding-left:3px;'></div></div><button style='font-size:0.85em; margin-left:10px; color:" + color + "'>" + memoType + "</button></div>" 
 	+ "<ul class='accordion' style='text-align:center; margin-left:10px; margin-right:10px; padding-left:0px; list-style: none;'></ul>";
 	
@@ -1053,7 +1053,7 @@ function setupWebsocket() {
 			};
 			
 			let li = make('li');
-			li.style = "margin-bottom:5px; overflow:hidden; text-overflow:ellipsis; padding-left:5px; padding-right:5px;";
+			li.style = "overflow:hidden; text-overflow:ellipsis; padding-left:5px; padding-right:5px;";
 			
 			let itemSpan = make('span');
 			itemSpan.textContent = "ID:\xa0";
@@ -2376,7 +2376,7 @@ function generateHTML(symbol) {
 			<strong style="overflow:hidden"><div id="${symbol}-display" style="text-overflow:ellipsis; overflow:hidden; font-size:1.2em;" class="flash">✏️ My Account</div></strong>
 		</div>
 		
-		<div id="${symbol}-editpanel" class="accordion" style="margin-left:10px; margin-top:10px; margin-bottom:20px">			
+		<div id="${symbol}-editpanel" class="accordion" style="margin-left:10px;">			
 			<div style="display:flex; justify-content:space-between;">
 				<input placeHolder="Public display name..." onfocus="scrollPanel(this)" id="${symbol}-set-display" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text" maxlength="64" onkeyup="if (event.keyCode == 13) setName('${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 				<button style="font-size:0.85em" onclick="setName('${symbol}')">Set</button>
@@ -2385,7 +2385,7 @@ function generateHTML(symbol) {
 		
 		<div class='address' id="${symbol}-address" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
 		
-		<div class="leftRightBase" style="margin-top:15px;">
+		<div class="leftRightBase">
 			<div style="display:flex; width: 100%">
 				<strong>Balance:</strong> 
 				<span id="${symbol}-balance" class="clickFlash" style="margin-left:5px; max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}
@@ -2411,6 +2411,7 @@ function generateHTML(symbol) {
 		headingContainer.setAttribute('onclick', 'toggleSubAccordion(this);');
 		headingContainer.classList.add("clickFlash");
 		headingContainer.classList.add("leftRightBase");
+		headingContainer.style.marginTop = "0px";
 		let heading = make('strong');
 		heading.textContent = title;
 		headingContainer.appendChild(heading);
@@ -2442,7 +2443,7 @@ function generateHTML(symbol) {
 		
 		<div id="${symbol}-itemize" style="margin-left:10px;"></div>
 		
-		<div class="leftRightBase" style="margin-top:15px;">
+		<div class="leftRightBase">
 			<strong>Subtotal</strong>
 			<input id="${symbol}-withdrawal-amount" placeholder="0.00" style="margin-left:5px; text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
 		</div>
@@ -2451,7 +2452,7 @@ function generateHTML(symbol) {
 	
 	loginDiv.innerHTML += `<div class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">			
 		<div style="margin-left:10px;">			
-			<div class="leftRightBase" style="margin-right:0px">
+			<div class="leftRightBase" style="margin-top:0px; margin-right:0px">
 				<input placeholder="Description..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = '';" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128" value="Network fee" disabled>
 				<input id="${symbol}-withdrawal-fee" placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0" disabled>
 				<button tabindex="-1" style="font-size:0.85em; filter:opacity(0)" disabled>&#65291;</button>
@@ -2478,12 +2479,12 @@ function generateHTML(symbol) {
 	makeTool("Invoice", "", 'tool4', 0, 
 		`<div id="${symbol}-invoice" style="margin-left:10px;"></div>
 		
-		<div class="leftRightBase" style="margin-top:15px;">
+		<div class="leftRightBase">
 			<strong>Subtotal</strong>
 			<input placeholder="0.00" style="margin-left:5px; text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
 		</div>
 		
-		<div class="leftRightBase" style="margin-top:15px; margin-right:0px;">				
+		<div class="leftRightBase" style="margin-right:0px;">				
 			<strong>Payment link</strong>
 			<a id="${symbol}-invoice-url" class="flash" target="_blank" href=""><button style="font-size:0.85em">Demo</button></a>
 		</div>
@@ -2513,15 +2514,15 @@ function generateHTML(symbol) {
 			<button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 		</div>	
 		
-		<div class="leftRightBase" style="margin-top:15px;">				
+		<div class="leftRightBase">				
 			<strong>Validity</strong>
 			<span id="${symbol}-signature-conclude" class="flash rightData">Unconfirmed</span>
 		</div>`);
 	
 	makeTool("Representative", 'rep-display', 'tool2', 20, 
-		`<div class='address' style="margin-bottom:10px;" id="${symbol}-rep" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
+		`<div class='address' id="${symbol}-rep" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
 		
-		<div class="leftRightBase" style="margin-top:15px;">
+		<div class="leftRightBase">
 			<strong>New representative</strong>
 			<span class="flash rightData" id="${symbol}-new-rep-display"></span>	
 		</div>
@@ -2538,7 +2539,7 @@ function generateHTML(symbol) {
 			<button style="font-size:0.85em" onclick="addressQR('${symbol}')">My Address</button>
 		</div>				
 		
-		<div class="leftRightBase" style="margin-top:15px;">				
+		<div class="leftRightBase">				
 			<strong>Type</strong>
 			<span id="${symbol}-type-display" class="flash rightData"></span>
 		</div>
