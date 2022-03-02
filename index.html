@@ -25,15 +25,15 @@
 							  position:fixed; left:0px; top:0px; border-radius:5px; pointer-events:none; filter:opacity(0.9);"></strong>
 	<div class="containerdiv">
 	<div id="firstDiv" class="firstDiv">				
-		<div id="quoteDisplay" style="display:none; margin-bottom:15px;">
+		<div id="quoteDisplay" style="display:none; margin-bottom:10px;">
 			<img src=""  onclick="toggleQuote();" id="preview" style="cursor:pointer; display:none; margin-left:auto; margin-right:auto; max-width:100%; max-height:200px; border-radius:15px">
 			<div id="quote" style="cursor:pointer; white-space:pre-wrap; font-style:italic; font-size:0.9em" onclick="toggleQuote();"></div>
 			
 			<input type="file" style="display:none" id="filetag" accept="image/*">		
 			<div id="advancedQuote" class="accordion" style="display:flex; position:relative; max-height:0px; align-items:center">
 				<div style="margin:auto">
-				<button id="imageButton" style="font-size:0.85em;" onclick="toggleImage()">Select Security Image</button>
-				<button id="wipeButton" style="font-size:0.85em;" onclick="toggleWipe()">Clear Keys on Update</button>
+					<button id="imageButton" style="font-size:0.85em;" onclick="toggleImage()">Security Image</button>
+					<button id="wipeButton" style="font-size:0.85em;" onclick="toggleWipe()">Clear Keys on Update</button>
 				</div>
 				<span style="position:absolute; right:0px">(<a rel="noopener" href="https://warashibetrader.github.io/2022/02/02/security-quote-protocol" target="_blank">?</a>)</span>
 			</div>
@@ -52,14 +52,13 @@
 				<option value="XLM">XLM - Stellar</option>
 				<option value="ALGO">ALGO - Algorand</option>
 			</select>	
-			<div style="position:absolute; right:0px">		
-				<button id="view" style="font-size:0.85em;" onclick="toggleView()" disabled>All Tools</button>
+			<div style="position:absolute; right:0px">
+				<button id="nprButton" style="font-size:0.85em" onclick="npr()">NPR</button>	
 				<button id="account" style="font-size:0.85em" onclick="toggleAccount()">Account</button>
 			</div>
 		</div>		
 		
 		<div id="donatePanel" style="text-align:center; margin-bottom:25px; margin-top:auto; width:100%">
-			<button id="nprButton" style="font-size:0.85em" onclick="npr()">NPR</button>	
 			<button id="donateButton" style="font-size:0.85em;" onclick="donate()" disabled>Support the Developer</button>
 		</div>
 	</div>
@@ -133,8 +132,7 @@ if (localStorage.getItem('symbol')) document.getElementById('firstDiv').style.ba
 var thisURL = 'https://transactcc.github.io/';
 //var thisURL = 'https://warashibetrader.github.io/crypto/wallet';
 var paymentWindow = false;
-var fullView = localStorage.getItem("view");
-if (fullView) D('view').classList.add('active');
+var fullView = true;
 let imgsrc = localStorage.getItem("image");
 if (imgsrc) {
 	D('preview').src = imgsrc;
@@ -154,6 +152,8 @@ var qrScanningSymbol = D('primary').value;
 var qrScanningType = "";	
 
 var clipboardText;
+const enc = new TextEncoder();
+const dec = new TextDecoder();
 
 //////////////////////////////////////////////////////// crypto currency classes
 
@@ -291,7 +291,12 @@ ccc['XNO'].derivePublicKey = function(secretKeyOrAddress) {
 	else publicKeyBytes = decodeNanoBase32(secretKeyOrAddress.substr(5, 52));
 	return byteArrayToHex(publicKeyBytes);
 }
-ccc['BAN'].derivePublicKey = ccc['XNO'].derivePublicKey;
+ccc['BAN'].derivePublicKey = function(secretKeyOrAddress) {
+	let publicKeyBytes;
+	if (!ccc['BAN'].checkAddress(secretKeyOrAddress)) publicKeyBytes = derivePublicFromSecret(hexToByteArray(secretKeyOrAddress));
+	else publicKeyBytes = decodeNanoBase32(secretKeyOrAddress.substr(4, 52));
+	return byteArrayToHex(publicKeyBytes);
+}
 
 ccc['XNO'].deriveAddress = function(publicKey) {
   const checksum = blake2b(hexToByteArray(publicKey), null, 5).reverse();
@@ -530,8 +535,8 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
 
 	li.innerHTML = "<div style='display:flex; justify-content:space-between'><strong style='margin-right:10px; overflow:hidden; text-overflow: ellipsis'></strong>"
 	+ "<strong style='text-align:right; overflow:hidden; text-overflow:ellipsis; color:" + color + "'>" + signSymbol + "<span class='clickFlash'></span> " + symbol + "</strong></div>"
-	+ "<div style='display:flex; justify-content:space-between; align-items:center; margin-top:3px; margin-bottom:5px'><div style='overflow:hidden'><div class='address' onclick='clickCopy(this, this.textContent)'></div>"
-	+ "<div style='font-size:0.85em; padding-left:3px; flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis'></div></div><button style='font-size:0.85em; margin-left:10px; color:" + color + "'>" + memoType + "</button></div>" 
+	+ "<div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:5px'><div style='overflow:hidden'><div class='address' onclick='clickCopy(this, this.textContent)'></div>"
+	+ "<div style='font-size:0.85em; padding-left:3px;'></div></div><button style='font-size:0.85em; margin-left:10px; color:" + color + "'>" + memoType + "</button></div>" 
 	+ "<ul class='accordion' style='text-align:center; margin-left:10px; margin-right:10px; padding-left:0px; list-style: none;'></ul>";
 	
 	li.children[0].children[0].appendChild(displayNameSpan);
@@ -632,8 +637,7 @@ ccc['ALGO'].sendTo = function(destination, amt) {
 		let algodClient = new algosdk.Algodv2("", ccc['ALGO'].sendServer, "");
 		return algodClient.getTransactionParams().do().then(function(params) {
 			params.fee = ccc['ALGO'].fee;
-			params.flatFee = true;		
-			const enc = new TextEncoder();
+			params.flatFee = true;
 			const note = enc.encode("");
 			let txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
 				from: ccc['ALGO'].address, 
@@ -656,6 +660,52 @@ ccc['ALGO'].sendTo = function(destination, amt) {
 		}).catch(function() { return networkFailMsg(); });
 	});
 };
+
+
+
+ccc['XNO'].sign = function(message) {
+	let symbol = 'XNO';	
+	return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc[symbol].privateKey)));
+}
+ccc['BAN'].sign = function(message) {
+	let symbol = 'BAN';	
+	return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc[symbol].privateKey)));
+}
+ccc['XLM'].sign = function(message) {
+	let symbol = 'XLM';	
+	return byteArrayToHex(StellarSdk.Keypair.fromSecret(ccc[symbol].privateKey).sign(enc.encode(message)));
+}
+ccc['ALGO'].sign = function(message) {
+	let symbol = 'ALGO';	
+	return byteArrayToHex(algosdk.signBytes(enc.encode(message), ccc[symbol].privateKey));
+}
+ccc['SOL'].sign = function(message) {
+	let symbol = 'SOL';	
+	return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc[symbol].privateKey)));
+}
+
+
+ccc['XNO'].verify = function(message, signature, address) {
+	try { return verifyDetached(enc.encode(message), hexToByteArray(signature), hexToByteArray(ccc['XNO'].derivePublicKey(address))); }
+	catch { return false };
+}
+ccc['BAN'].verify = function(message, signature, address) {
+	try { return verifyDetached(enc.encode(message), hexToByteArray(signature), hexToByteArray(ccc['BAN'].derivePublicKey(address))); }
+	catch { return false };
+}
+ccc['XLM'].verify = function(message, signature, address) {
+	let byteArr = hexToByteArray(signature);
+	byteArr.toJSON = function() {
+		return { type: 'Buffer', data: Array.prototype.slice.call(this._arr || this, 0) };
+	}
+	try { return StellarSdk.Keypair.fromPublicKey(address).verify(enc.encode(message), byteArr); }
+	catch { return false };
+}
+ccc['ALGO'].verify = function(message, signature, address) {
+	try { return algosdk.verifyBytes(enc.encode(message), hexToByteArray(signature), address); }
+	catch { return false };
+}
+
 
 ccc['BAN'].getBlock = function(hash) { return post(ccc['BAN'].server, {action: 'block_info', json_block: true, hash: hash}); };
 ccc['XNO'].getBlock = function(hash) { return post(ccc['XNO'].server, {action: 'block_info', json_block: true, hash: hash}); };
@@ -1080,8 +1130,6 @@ if (urlParams.has('preferred') && urlParams.has('addresses') && urlParams.has('i
 function loadPaymentsPage(data) {
 	paymentWindow = true;
 	fullView = false;
-	D('view').classList.remove('active');
-	D('view').style.display = "none";
 	let symbol = data.preferred;
 	D('primary').value = symbol;
 	D('primary').disabled = true;
@@ -1117,7 +1165,18 @@ function loadPaymentsPage(data) {
 
 //////////////////////////////////////////////////////// Other global eventlisteners
 
-window.addEventListener('copy', function(e) { if (document.getSelection().toString()) clipboardText = document.getSelection().toString(); });
+window.addEventListener('copy', function(e) { 
+	if (document.getSelection().toString()) {
+		clipboardText = document.getSelection().toString();		
+		navigator.clipboard.writeText(clipboardText);
+	}
+});
+window.addEventListener('cut', function(e) { 
+	if (document.getSelection().toString()) {
+		clipboardText = document.getSelection().toString(); 		
+		navigator.clipboard.writeText(clipboardText);
+	}
+});
 
 window.addEventListener('keydown', function(evt) {
 	if (evt.altKey) {
@@ -1303,8 +1362,10 @@ function loadDisplay(symbol, keepAccount) {
 	ccc[symbol].getTransactions();
 	updateView();
 	D('donateButton').disabled = false;
-	D('view').disabled = false;	
-	if (!paymentWindow) makeInvoiceLink(symbol);
+	if (!paymentWindow) {
+		makeInvoiceLink(symbol);
+		makeSignature(symbol);
+	}
 	if (!keepAccount && D(symbol + "-tool1").style.maxHeight != "0px") toggleAccount(symbol);
 }
 
@@ -1393,7 +1454,6 @@ function clearWallet(symbol) {
 	D(symbol + "-gray").style.display = "none";
 	D(symbol + "-gray2").style.display = "none";
 	D('donateButton').disabled = true;
-	D('view').disabled = true;
 	
 	D(symbol + '-invoice-url').href = "";
 	flash(D(symbol + '-invoice-url-literal'), "\xa0");
@@ -1422,8 +1482,8 @@ function prepareTotalTab(symbol, elt) {
 	if (D(symbol + "-withdrawal-amount").value && D(symbol + "-dest-display").textContent) D(symbol + "-paymentButton").disabled = false;
 	else D(symbol + "-paymentButton").disabled = true;
 		
-	showAccordion(elt.parentNode.parentNode.nextElementSibling);	
-	elt.parentNode.parentNode.nextElementSibling.style.padding = "";
+	showAccordion(elt.parentNode.parentNode.parentNode.nextElementSibling);	
+	elt.parentNode.parentNode.parentNode.nextElementSibling.style.padding = "";
 }
 
 var invoiceWaiter;
@@ -1457,6 +1517,36 @@ function makeInvoiceLink(symbol) {
 			invoiceWaiter = ""; 
 			makeInvoiceLink(symbol);
 		}, 500);
+	}
+}
+
+var signatureWaiter;
+function makeSignature(symbol) {
+	if (!signatureWaiter) {
+		if (D(symbol + "-sign")) {
+			D(symbol + "-signature").textContent = ccc[symbol].sign(D(symbol + "-contract").textContent);
+			D(symbol + '-signature').style.opacity = "";
+			signatureWaiter = setTimeout(function() {	signatureWaiter = ""; }, 500);
+		}
+	} else {
+		clearTimeout(signatureWaiter);
+		D(symbol + '-signature').style.opacity = "0.3";
+		signatureWaiter = setTimeout(function() {
+			signatureWaiter = ""; 
+			makeSignature(symbol);
+		}, 500);
+	}
+}
+
+function verifySignature(symbol) {
+	if (D(symbol + "-signer")) {
+		if (ccc[symbol].verify(D(symbol + "-contract-verify").textContent, D(symbol + "-signature-verify").value, D(symbol + "-signer").value)) {
+			flash(D(symbol + "-signature-conclude"), "Confirmed");
+			D(symbol + "-signature-conclude").style.color = "#097";
+		} else {
+			D(symbol + "-signature-conclude").textContent = "Unconfirmed";
+			D(symbol + "-signature-conclude").style.color = "";
+		}
 	}
 }
 
@@ -1636,6 +1726,26 @@ function hideAccordion(obj) {
 	obj.style.marginTop = "0px";
 }
 
+function toggleSubAccordion(but) {
+	let obj = but.parentNode.lastElementChild;
+	if (obj.style.maxHeight == "0px") {
+		showAccordion(obj);	
+		setTimeout(function() { if (obj.style.maxHeight != "0px") obj.style.maxHeight = ""; }, 100);
+	} else {
+		if (obj.style.maxHeight != "0px") showAccordion(obj);
+		setTimeout(function() { hideAccordion(obj); }, 1);
+	}
+}
+
+function openSubAccordion(but) {
+	let obj = but.lastElementChild;	
+	if (obj.style.maxHeight == "0px") {
+		showAccordion(obj);	
+		setTimeout(function() { if (obj.style.maxHeight != "0px") obj.style.maxHeight = ""; }, 100);
+	}
+}
+
+
 function hideAccordionPadding(obj) {
 	obj.style.paddingTop = "0px";
 	obj.style.paddingBottom = "0px";
@@ -1690,47 +1800,43 @@ function toggleInvoices(elt, symbol) {
 	filterTransactions(symbol);
 }
 
-function toggleView() {
-	if (fullView) {
-		localStorage.removeItem("view");
-		D('view').classList.remove('active');
-	} else {
-		localStorage.setItem("view", "true");
-		D('view').classList.add('active');
-	}
-	fullView = !fullView;
-	updateView();
-}
-
 function updateView() {
 	let symbol = D('primary').value;	
 	let obj = D(symbol + "-tool2");
 	let obj3 = D(symbol + "-tool3");
 	let obj4 = D(symbol + "-tool4");
-	if (fullView) {
-     	showAccordion(obj);
-		obj.style.padding = "";
-		obj.style.marginTop = "20px";
+	let signobj = D(symbol + "-sign");
+	let verifyobj = D(symbol + "-verify");
+	if (!fullView) {	
+		if (obj.style.maxHeight != "0px") showAccordion(obj);
+		setTimeout(function() {		
+			hideAccordion(obj);
+			hideAccordionPadding(obj);
+		}, 1);
 		
-     	showAccordion(obj3);
-		obj3.style.paddingTop = "";	
-		obj3.style.paddingBottom = "25px";	
-		obj3.style.marginTop = "";
+		if (obj3.style.maxHeight != "0px") showAccordion(obj3);
+		setTimeout(function() {		
+			hideAccordion(obj3);
+			hideAccordionPadding(obj3);
+		}, 1);
 		
-     	showAccordion(obj4);
-		obj4.style.padding = "";	
-		obj4.style.marginTop = "20px";	
-		setTimeout(function() { if (obj4.style.maxHeight != "0px") obj4.style.maxHeight = ""; }, 100);
-	} else {
-		hideAccordion(obj);
-		hideAccordionPadding(obj);		
-		hideAccordion(obj3);
-		hideAccordionPadding(obj3);	
 
 		if (obj4.style.maxHeight != "0px") showAccordion(obj4);
 		setTimeout(function() {		
 			hideAccordion(obj4);
 			hideAccordionPadding(obj4);
+		}, 1);
+		
+		if (signobj.style.maxHeight != "0px") showAccordion(signobj);
+		setTimeout(function() {		
+			hideAccordion(signobj);
+			hideAccordionPadding(signobj);
+		}, 1);
+		
+		if (verifyobj.style.maxHeight != "0px") showAccordion(verifyobj);
+		setTimeout(function() {		
+			hideAccordion(verifyobj);
+			hideAccordionPadding(verifyobj);
 		}, 1);
 	}
 }
@@ -1784,8 +1890,9 @@ function addItem(elt) {
 
 function donate() {
 	let symbol = D('primary').value;
-	if (fullView) D(symbol + "-dest").parentNode.scrollIntoView({block:"center", behavior:"auto"});
+	D(symbol + "-dest").parentNode.scrollIntoView({block:"center", behavior:"auto"});
 	D(symbol + "-dest").value = ccc[symbol].donation;
+	openSubAccordion(D(symbol + "-dest").parentNode.parentNode.parentNode);
 	flash(D(symbol + "-dest"));
 	fetchDisplayName(symbol, '-dest-display', D(symbol + "-dest").value, true);
 }
@@ -1808,7 +1915,7 @@ function toggleImage() {
 		D('preview').style.display = "none";
 		D('quote').style.display = "";
 		D("imageButton").classList.remove('active');
-		D("imageButton").textContent = "Select Security Image";
+		D("imageButton").textContent = "Security Image";
 		localStorage.removeItem("image");
 	} else D('filetag').click();
 }
@@ -2180,7 +2287,6 @@ async function selectPrimary(symbol) {
 	qrclose();
 	D('firstDiv').style.backgroundColor = ccc[symbol].bgColor;
 	D('donateButton').disabled = true;
-	D('view').disabled = true;
 	
 	D('quoteDisplay').style.display = "none";
 	D('firstDiv').insertBefore(D('quoteDisplay'), D('firstDiv').children[0]);	
@@ -2285,19 +2391,19 @@ function generateHTML(symbol) {
 		<div style="display:flex; justify-content:space-between; margin-top:15px;">
 			<input onfocus="scrollPanel(this)" placeholder="Private key (store securely) ..." id="${symbol}-seed" style="padding-right:30px; flex-grow:1; flex-basis:20px; margin-right:10px;" type="password" autocomplete="off" onclick="this.select()" oninput="importWallet('${symbol}'); D('${symbol}-generateButton').disabled = (this.value.length != 0);">
 			<button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
-			<div>
-				<button id="${symbol}-show" tabindex="-1" style="font-size:0.85em" onclick="toggleVisibility('${symbol}')">Show</button>
-			</div>			
+			<button id="${symbol}-show" tabindex="-1" style="font-size:0.85em" onclick="toggleVisibility('${symbol}')">Show</button>
 		</div>
 		<canvas style="width:100%; margin-top:10px;" hidden="" id="${symbol}-qr-canvas-seed"></canvas>
 		<input onfocus="scrollPanel(this)" placeholder="Account index (default 0; or 1, 2, 3, etc) ..." id="${symbol}-index" type="number" style="margin-top:15px; width:calc(100% - 10px)" min="0" maxlength="64" onclick="this.select()" oninput="importWallet('${symbol}');">
-		<div style="text-align:center;">
-		</div>
-	</div>
-	<div id="${symbol}-gray" style="display:none;">
-	<div class="objectWrapper">
+	</div>`;
+	
+	let loginDiv = make('div');
+	loginDiv.style.display = "none";
+	loginDiv.id = symbol + "-gray";
+	ccc[symbol].sidebarElt.appendChild(loginDiv);
+	loginDiv.innerHTML = `<div class="objectWrapper">
 		<div style="display:flex; align-items:center; justify-content:space-between">
-			<strong><div id="${symbol}-display" style="font-size:1.2em;" class="clickFlash" onclick="toggleEdit('${symbol}'); fetchDisplayName('${symbol}', '-display', ccc['${symbol}'].address, true)">✏️ My Account</div></strong>
+			<strong style="overflow:hidden"><div id="${symbol}-display" style="text-overflow:ellipsis; overflow:hidden; font-size:1.2em;" class="clickFlash" onclick="toggleEdit('${symbol}'); fetchDisplayName('${symbol}', '-display', ccc['${symbol}'].address, true)">✏️ My Account</div></strong>
 			<button style="font-size:0.85em" onclick="fetchDisplayName('${symbol}', '-display', ccc['${symbol}'].address, true); refreshBalance('${symbol}'); ccc['${symbol}'].getTransactions();">Refresh</button>
 		</div>
 		
@@ -2306,119 +2412,162 @@ function generateHTML(symbol) {
 				<input placeHolder="Public display name..." onfocus="scrollPanel(this)" id="${symbol}-set-display" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text" maxlength="64" onkeyup="if (event.keyCode == 13) setName('${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 				<button style="font-size:0.85em" onclick="setName('${symbol}')">Set</button>
 			</div>
-		</div>
+		</div>		
 		
-		
-		<div style="margin-bottom:15px; margin-top:5px;">
 		<div class='address' id="${symbol}-address" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
-		</div>
 		
-		<div style="display:flex; align-items:baseline; justify-content:space-between; margin-right:5px;">
-			<div style="width:100%; display:flex">
-				<strong>Balance:&nbsp;</strong> 
-				<span id="${symbol}-balance" class="clickFlash" style="max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}
+		<div class="leftRightBase" style="margin-right:5px; margin-top:15px;">
+			<div style="display:flex; width: 100%">
+				<strong>Balance:</strong> 
+				<span id="${symbol}-balance" class="clickFlash" style="margin-left:5px; max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}
 			</div>
 		</div>
-		<div id="${symbol}-arriving-balance-panel" style="margin-top:10px; display:flex; align-items:baseline; justify-content:space-between">
+		<div id="${symbol}-arriving-balance-panel" class="leftRightBase" style="margin-top:10px;">
 			<div style="width:calc(100% - 65px); display:flex">
-				<strong style="white-space:nowrap">Arriving balance:&nbsp;</strong> 
-				<span id="${symbol}-balance-pending" class="clickFlash" style="max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}&nbsp;
+				<strong style="white-space:nowrap">Arriving balance:</strong> 
+				<span id="${symbol}-balance-pending" class="clickFlash" style="margin-left:5px; max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}
 			</div>
 			<button style="font-size:0.85em" onclick="cyclePending('${symbol}', this)">Collect</button>
 		</div>
-	</div>
+	</div>`;
+	
+	function makeTool(title, subtitle, id, margin, content) {
+		let toolDiv = make('div');
+		toolDiv.classList.add("objectWrapper");
+		if (margin) toolDiv.style.marginTop = margin + "px";
+		if (id) toolDiv.id = symbol + "-" + id;
+		toolDiv.setAttribute('onclick', 'openSubAccordion(this);');
 
-	<div class="objectWrapper">
-		<strong>Destination: </strong><span class="flash" id="${symbol}-dest-display"></span>
-		<div style="display:flex; justify-content:space-between; margin-top:5px;">
-			<input placeholder="Destination address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-dest-display', this.value); D('${symbol}-paymentButton').disabled = true;"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+		let headingContainer = make('div');
+		headingContainer.setAttribute('onclick', 'toggleSubAccordion(this);');
+		headingContainer.style.cursor = "pointer";
+		let heading = make('strong');
+		heading.textContent = title;
+		headingContainer.appendChild(heading);
+		if (subtitle) headingContainer.innerHTML += subtitle;
+		toolDiv.appendChild(headingContainer);
+
+		let accord = make('div');
+		accord.classList.add("accordion");
+		accord.style.maxHeight = "0px";
+		accord.innerHTML = content;		
+		toolDiv.appendChild(accord);
+		
+		loginDiv.appendChild(toolDiv);
+	}
+	
+	makeTool("Transfer: ", `<span class="flash" id="${symbol}-dest-display"></span>`, "", 20, 
+		`<div style="display:flex; justify-content:space-between; margin-top:5px;">
+			<input placeholder="Destination address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-dest-display', this.value); D('${symbol}-paymentButton').disabled = true;">
+			<button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 			<button tabindex="-1" id="${symbol}-qrButton2" style="font-size:0.85em" onclick="qrscan('${symbol}', '-dest', this)">QR</button>
 		</div>		
 		<canvas style="width:100%; margin-top:10px;" hidden="" id="${symbol}-qr-canvas"></canvas>
 		
-		
 		<div id="${symbol}-itemize" style="margin-left:10px; margin-right:10px"></div>
 		
-		<div style="display:flex; justify-content:space-between; margin-top:15px; margin-right:5px; align-items:baseline">
-			<strong>Subtotal:&nbsp;</strong>
-			<input id="${symbol}-withdrawal-amount" placeholder="0.00" style="text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
+		<div class="leftRightBase" style="margin-top:15px; margin-right:5px;">
+			<strong>Subtotal</strong>
+			<input id="${symbol}-withdrawal-amount" placeholder="0.00" style="margin-left:5px; text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
 		</div>
 		
-		<div style="text-align:center;">
-			<button style="margin-top:10px; font-size:0.85em" onclick="prepareTotalTab('${symbol}', this)">Total and Summary</button>
-		</div>
-	</div>
+		<div style="text-align:center; margin-top:10px;"><button style="font-size:0.85em" onclick="prepareTotalTab('${symbol}', this)">Total and Summary</button></div>`);
 	
-	<div class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">			
+	loginDiv.innerHTML += `<div class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">			
 		<div style="margin-left:10px; margin-right:10px">			
-			<div style="display:flex; justify-content:space-between; align-items:baseline;">
+			<div class="leftRightBase">
 				<input placeholder="Description..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = '';" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128" value="Network fee" disabled>
-				<input placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0" id="${symbol}-withdrawal-fee" disabled>
+				<input id="${symbol}-withdrawal-fee" placeholder="0.00" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0" disabled>
 				<button tabindex="-1" style="font-size:0.85em; filter:opacity(0)" disabled>&#65291;</button>
 			</div>
 		</div>
 				
-		<div class="flash" style="display:flex; justify-content:space-between; align-items:baseline; margin-top:5px; margin-right:5px;">
-			<strong>Total:&nbsp;</strong>
-			<input id="${symbol}-withdrawal-amount-total" placeholder="0.00" style="text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
+		<div class="flash leftRightBase" style="margin-top:5px; margin-right:5px;">
+			<strong>Total</strong>
+			<input id="${symbol}-withdrawal-amount-total" placeholder="0.00" style="margin-left:5px; text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
 		</div>
 		
-		<div class="flash" style="display:flex; justify-content:space-between; align-items:baseline; margin-top:5px; margin-right:5px;">				
-			<strong>Destination:&nbsp;</strong>
-			<span id="${symbol}-dest-display-confirm" style="text-align:right;"></span>
+		<div class="flash leftRightBase" style="margin-top:5px; margin-right:5px;">				
+			<strong>Destination</strong>
+			<span id="${symbol}-dest-display-confirm" class="rightData"></span>
 		</div>
 		
-		<div style="text-align:center;">
-			<button id="${symbol}-paymentButton" style="margin-top:15px" onclick="withdraw('${symbol}', this)" disabled>Transfer ${symbol}</button>
-			<button style="margin-top:15px" onclick="clearPaymentSummary('${symbol}');">Cancel</button>
+		<div style="text-align:center; margin-top:15px;">
+			<button id="${symbol}-paymentButton" onclick="withdraw('${symbol}', this)" disabled>Transfer ${symbol}</button>
+			<button onclick="clearPaymentSummary('${symbol}');">Cancel</button>
 		</div>
-	</div>
-		
+	</div>`;
 	
-	<div id="${symbol}-tool4" class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">
-		<strong>Invoice/bill/check generator:</strong>		
-		<div id="${symbol}-invoice" style="margin-left:10px; margin-right:10px"></div>
-		
-		<div style="display:flex; justify-content:space-between; margin-top:15px; margin-right:5px; align-items:baseline">
-			<strong>Subtotal:&nbsp;</strong>
-			<input placeholder="0.00" style="text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
-		</div>
-			
-		<div style="margin-top:15px; display:flex; align-items:baseline; justify-content:space-between">
-			<a class="clickFlash" target="_blank" href="" id="${symbol}-invoice-url">Payment Link</a>
-			<a style="font-size:0.9em; text-align:right" class="clickFlash" rel="noopener" target="_blank" href="https://warashibetrader.github.io/2022/02/17/invoices">Advanced Integrations</a>
-		</div>
-		<div style="margin-bottom:10px; margin-top:10px;">
-			<div class='address' style="white-space:nowrap" id="${symbol}-invoice-url-literal" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
-		</div>
-	</div>
 	
-	<div id="${symbol}-tool3" class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">
-		<strong>Device-to-device communication:</strong>
-		<div style="margin-bottom:10px; display:flex; justify-content:space-between; margin-top:10px;">
+	makeTool("Invoice:", "", 'tool4', 0, 
+		`<div id="${symbol}-invoice" style="margin-left:10px; margin-right:10px"></div>
+		
+		<div class="leftRightBase" style="margin-top:15px; margin-right:5px;">
+			<strong>Subtotal</strong>
+			<input placeholder="0.00" style="margin-left:5px; text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
+		</div>
+		
+		<div class="leftRightBase" style="margin-top:15px; margin-right:5px;">				
+			<strong>Payment link</strong>
+			<a id="${symbol}-invoice-url" class="flash rightData" target="_blank" href="">Demo</a>
+		</div>
+		
+		<div id="${symbol}-invoice-url-literal" class='address' style="margin-right:5px" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
+		
+		<div style="text-align:center; margin-top:15px;">
+			<a style="font-size:0.9em;" class="clickFlash" rel="noopener" target="_blank" href="https://warashibetrader.github.io/2022/02/17/invoices">Advanced Integrations</a>
+		</div>`);
+	
+	
+	makeTool("Sign contract:", "", 'sign', 20, 	
+		`<div id="${symbol}-contract" style="font-size:0.9em; margin-top:5px; margin-right:10px;" class="textbox" onkeyup="if (this.textContent.length == 0) this.innerHTML = ''; makeSignature('${symbol}')" placeholder="Contract..." contenteditable="true">Now if I carry out this oath, and break it not, may I gain for ever reputation among all men for my life and for my art; but if I break it and forswear myself, may the opposite befall me.</div>	
+
+		<div style="margin-top:10px">
+			<strong>Signature</strong> 
+			<div id="${symbol}-signature" class='address' style="max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)"></div>
+		</div>`);
+		
+	makeTool("Validate contract: ", `<span class="flash" id="${symbol}-signer-display"></span>`, 'verify', 0, 
+		`<div style="display:flex; margin-top:5px;">
+			<input id="${symbol}-signer" placeholder="Signee address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" type="text" maxlength="128" onclick="this.select()" oninput="verifySignature('${symbol}'); fetchDisplayName('${symbol}', '-signer-display', this.value);">
+			<button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+		</div>		
+		<div id="${symbol}-contract-verify" style="font-size:0.9em; margin-top:10px; margin-right:10px;" class="textbox" onkeyup="if (this.textContent.length == 0) this.innerHTML = ''; verifySignature('${symbol}');" placeholder="Contract..." contenteditable="true"></div>
+		<div style="display:flex; margin-top:15px;">
+			<input id="${symbol}-signature-verify" oninput="verifySignature('${symbol}');" placeholder="Signature..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" type="text" maxlength="512" onclick="this.select()">
+			<button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+		</div>	
+		
+		<div class="leftRightBase" style="margin-top:15px; margin-right:5px;">				
+			<strong>Validity</strong>
+			<span id="${symbol}-signature-conclude" class="flash rightData">Unconfirmed</span>
+		</div>`);
+	
+	makeTool("Communicate device-to-device (QR):", '', 'tool3', 20,
+		`<div style="display:flex; margin-top:5px;">
 			<input placeholder="Text to QR-encode..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-qr-input" type="text" maxlength="512" onclick="this.select()" oninput="generateQR('${symbol}', this.value)"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 			<button style="font-size:0.85em" onclick="addressQR('${symbol}')">My Address</button>
 		</div>				
-		<strong>Type: </strong><span id="${symbol}-type-display"></span>	
-		<br><strong>Owner: </strong><span class="flash" id="${symbol}-directory-display"></span>	
-		<div style="margin-top:20px; display:flex; justify-content:center" id="${symbol}-qrCodeImageBlock"></div>
-	</div>
 		
-	<div id="${symbol}-tool2" class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">
-		<strong>Current representative: </strong><span class="flash" id="${symbol}-rep-display"></span>
-		<div class="address" style="margin-bottom:10px; margin-top:5px;" id="${symbol}-rep" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
+		<div class="leftRightBase" style="margin-top:15px; margin-right:5px;">				
+			<strong>Type</strong>
+			<span id="${symbol}-type-display" class="flash rightData"></span>
+		</div>
+		<div class="leftRightBase" style="margin-top:5px; margin-right:5px;">				
+			<strong>Owner</strong>
+			<span id="${symbol}-directory-display" class="flash rightData">Unconfirmed</span>
+		</div>
+		
+		<div style="margin-top:20px; display:flex; justify-content:center" id="${symbol}-qrCodeImageBlock"></div><div style="margin-top:10px"></div>`);
+	
+	makeTool("Representative: ", `<span class="flash" id="${symbol}-rep-display"></span>`, 'tool2', 0, 
+		`<div class='address' style="margin-bottom:10px;" id="${symbol}-rep" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
 		<strong>New representative: </strong><span class="flash" id="${symbol}-new-rep-display"></span>	
 		<div style="display:flex; justify-content:space-between; margin-top:5px;">
 			<input placeholder="New representative address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-new-rep" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-new-rep-display', this.value)" onkeyup="if (event.keyCode == 13) setRep('${symbol}', this)"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 			<button style="font-size:0.85em" onclick="suggestRep('${symbol}')">Suggest</button>
 		</div>
-		<div style="text-align:center;">
-		<button style="margin-top:15px" onclick="setRep('${symbol}', this)">Set Representative</button>	
-		</div>
-	</div>
-	
-		
-	</div>`;
+		<div style="text-align:center;"><button style="margin-top:15px" onclick="setRep('${symbol}', this)">Set Representative</button></div>`);
 }
 
 </script>
