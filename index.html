@@ -132,7 +132,6 @@ if (localStorage.getItem('symbol')) document.getElementById('firstDiv').style.ba
 var thisURL = 'https://transactcc.github.io/';
 //var thisURL = 'https://warashibetrader.github.io/crypto/wallet';
 var paymentWindow = false;
-var fullView = true;
 let imgsrc = localStorage.getItem("image");
 if (imgsrc) {
 	D('preview').src = imgsrc;
@@ -1129,12 +1128,12 @@ if (urlParams.has('preferred') && urlParams.has('addresses') && urlParams.has('i
 
 function loadPaymentsPage(data) {
 	paymentWindow = true;
-	fullView = false;
 	let symbol = data.preferred;
 	D('primary').value = symbol;
 	D('primary').disabled = true;
 	D('secondDiv').style.display = "none";
-	D('donatePanel').style.display = "none";
+	D('donatePanel').style.display = "none";	
+	openSubAccordion(D(symbol + "-dest").parentNode.parentNode.parentNode);
 	if (screen.width <= 550 || screen.height <= 550) D('firstDiv').parentNode.style.width = "100%";
 	else {
 		D('firstDiv').parentNode.style = "justify-content:center; height:initial; min-height:100%; background-color:" + ccc[symbol].bgColor;
@@ -1360,11 +1359,17 @@ function importWallet(symbol) {
 function loadDisplay(symbol, keepAccount) {
 	refreshBalance(symbol);
 	ccc[symbol].getTransactions();
-	updateView();
+	
 	D('donateButton').disabled = false;
 	if (!paymentWindow) {
 		makeInvoiceLink(symbol);
 		makeSignature(symbol);
+	} else {
+		D(symbol + "-tool2").style.display = "none";
+		D(symbol + "-tool3").style.display = "none";
+		D(symbol + "-tool4").style.display = "none";
+		D(symbol + "-sign").style.display = "none";
+		D(symbol + "-verify").style.display = "none";
 	}
 	if (!keepAccount && D(symbol + "-tool1").style.maxHeight != "0px") toggleAccount(symbol);
 }
@@ -1745,7 +1750,6 @@ function openSubAccordion(but) {
 	}
 }
 
-
 function hideAccordionPadding(obj) {
 	obj.style.paddingTop = "0px";
 	obj.style.paddingBottom = "0px";
@@ -1798,47 +1802,6 @@ function toggleInvoices(elt, symbol) {
 		}
 	} else elt.classList.add('active');
 	filterTransactions(symbol);
-}
-
-function updateView() {
-	let symbol = D('primary').value;	
-	let obj = D(symbol + "-tool2");
-	let obj3 = D(symbol + "-tool3");
-	let obj4 = D(symbol + "-tool4");
-	let signobj = D(symbol + "-sign");
-	let verifyobj = D(symbol + "-verify");
-	if (!fullView) {	
-		if (obj.style.maxHeight != "0px") showAccordion(obj);
-		setTimeout(function() {		
-			hideAccordion(obj);
-			hideAccordionPadding(obj);
-		}, 1);
-		
-		if (obj3.style.maxHeight != "0px") showAccordion(obj3);
-		setTimeout(function() {		
-			hideAccordion(obj3);
-			hideAccordionPadding(obj3);
-		}, 1);
-		
-
-		if (obj4.style.maxHeight != "0px") showAccordion(obj4);
-		setTimeout(function() {		
-			hideAccordion(obj4);
-			hideAccordionPadding(obj4);
-		}, 1);
-		
-		if (signobj.style.maxHeight != "0px") showAccordion(signobj);
-		setTimeout(function() {		
-			hideAccordion(signobj);
-			hideAccordionPadding(signobj);
-		}, 1);
-		
-		if (verifyobj.style.maxHeight != "0px") showAccordion(verifyobj);
-		setTimeout(function() {		
-			hideAccordion(verifyobj);
-			hideAccordionPadding(verifyobj);
-		}, 1);
-	}
 }
 
 function addTotal(elt) {
@@ -2434,7 +2397,6 @@ function generateHTML(symbol) {
 	function makeTool(title, subtitle, id, margin, content) {
 		let toolDiv = make('div');
 		toolDiv.classList.add("objectWrapper");
-		toolDiv.classList.add("accordion");
 		if (margin) toolDiv.style.marginTop = margin + "px";
 		if (id) toolDiv.id = symbol + "-" + id;
 		toolDiv.setAttribute('onclick', 'openSubAccordion(this);');
