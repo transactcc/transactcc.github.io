@@ -2434,6 +2434,7 @@ function generateHTML(symbol) {
 	function makeTool(title, subtitle, id, margin, content) {
 		let toolDiv = make('div');
 		toolDiv.classList.add("objectWrapper");
+		toolDiv.classList.add("accordion");
 		if (margin) toolDiv.style.marginTop = margin + "px";
 		if (id) toolDiv.id = symbol + "-" + id;
 		toolDiv.setAttribute('onclick', 'openSubAccordion(this);');
