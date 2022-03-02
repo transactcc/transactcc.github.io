@@ -181,6 +181,7 @@ a:hover {
 	display:flex; 
 	justify-content:space-between; 
 	align-items:baseline;
+	margin-right:5px;
 }
 
 .rightData {
