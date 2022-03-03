@@ -124,6 +124,7 @@ if (localStorage.getItem('symbol')) document.getElementById('firstDiv').style.ba
 <script src="qrcode.js"></script>
 <script src="qrscan.js"></script>
 <script src="nacl.js"></script>
+<script src="tweetnacl.js"></script>
 
 <script>
 'use strict';
@@ -589,7 +590,7 @@ ccc['XNO'].sign = function(message) { return byteArrayToHex(signDetached(enc.enc
 ccc['BAN'].sign = function(message) { return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc['BAN'].privateKey))); }
 ccc['XLM'].sign = function(message) { return byteArrayToHex(StellarSdk.Keypair.fromSecret(ccc['XLM'].privateKey).sign(enc.encode(message))); }
 ccc['ALGO'].sign = function(message) { return byteArrayToHex(algosdk.signBytes(enc.encode(message), ccc['ALGO'].privateKey)); }
-ccc['SOL'].sign = function(message) { return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc['SOL'].privateKey))); }
+ccc['SOL'].sign = function(message) { return byteArrayToHex(nacl.sign.detached(enc.encode(message), ccc['SOL'].privateKey.secretKey)); }
 
 
 ccc['XNO'].verify = function(message, signature, address) {
@@ -609,6 +610,12 @@ ccc['XLM'].verify = function(message, signature, address) {
 ccc['ALGO'].verify = function(message, signature, address) {
 	try { return algosdk.verifyBytes(enc.encode(message), hexToByteArray(signature), address); }
 	catch { return false };
+}
+ccc['SOL'].verify = function(message, signature, address) {
+	try {
+		let pubKey = new solanaWeb3.PublicKey(address);
+		return nacl.sign.detached.verify(enc.encode(message), hexToByteArray(signature), pubKey.toBytes()); 
+	} catch { return false };
 }
 
 ccc['BAN'].sendTo = function(destination, amt) { return enqueue('BAN', function() {return nanoSend('BAN', destination, amt);}); };
