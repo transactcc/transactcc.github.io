@@ -380,6 +380,7 @@ ccc['BAN'].getTransactions = function(start) {nanoDisplayTransactions('BAN', sta
 ccc['XNO'].getTransactions = function(start) {nanoDisplayTransactions('XNO', start);};
 function nanoDisplayTransactions(symbol, start) {
 	post(ccc[symbol].server, { action: 'account_history', head:start, account: ccc[symbol].address, count:10 }).then(function(history) {
+	if (history.account != ccc[symbol].address) return false;
 	if (D(symbol + '-loadMore') && history && history.history) {
 		handlePage(symbol, history.previous, history.history[history.history.length - 1].height, history.previous);
 		for (let i = 0; i < history.history.length; i++) {
@@ -428,9 +429,9 @@ ccc['SOL'].getTransactions = function(start) {
 							} else if (j < 2) {
 								let actualAddress = historyDetails[i].transaction.message.accountKeys[j].pubkey.toBase58()
 								li.children[1].children[0].children[0].textContent = actualAddress;
-								fetchDisplayName(symbol, "-" + historyDetails[i].slot + "-display", actualAddress);								
+								fetchDisplayName(symbol, "-" + historyDetails[i].slot, actualAddress);								
 								li.children[0].children[0].children[0].onclick = function() {
-									fetchDisplayName(symbol, "-" + historyDetails[i].slot + "-display", actualAddress, true);
+									fetchDisplayName(symbol, "-" + historyDetails[i].slot, actualAddress, true);
 								}
 							}
 						}
@@ -521,7 +522,7 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
 	displayNameSpan.style.borderRadius = '5px';
 	displayNameSpan.textContent = "Unknown";
 	if (ccc[symbol].checkAddress(address)) displayNameSpan.onclick = function() {
-		fetchDisplayName(symbol, "-" + number + "-display", address, true);
+		fetchDisplayName(symbol, "-" + number, address, true);
 	}
 	
 	let memoType = "Invoice";
@@ -574,7 +575,7 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
 	
 	li.title = number;	
 	addOrdered(li, D(symbol + '-transactions'));
-	if (ccc[symbol].checkAddress(address)) fetchDisplayName(symbol, "-" + number + "-display", address);
+	if (ccc[symbol].checkAddress(address)) fetchDisplayName(symbol, "-" + number, address);
 	flash(li);
 	return li;
 }
@@ -936,7 +937,7 @@ function setupWebsocket() {
 	ws.onopen = function() { 
 		let symbol = D('primary').value;
 		let address = ccc[symbol].address;
-		if (address && !nameCache[address] && !localStorage.getItem(`${symbol}-display`)) fetchDisplayName(symbol, "-display", address);
+		if (address && !nameCache[address] && !localStorage.getItem(`${symbol}-display`)) fetchDisplayName(symbol, "", address);
 	};
 	ws.onclose = function() { 
 		ws = new WebSocket(exchangeURL());
@@ -1006,8 +1007,8 @@ function setupWebsocket() {
 	
 	ws.on('getNameReplyCue', function(data) {
 		nameCache[data.address] = data.display;
-		if (data.div == "-display") localStorage.setItem(`${data.currency}-display`, JSON.stringify({address:data.address, name:data.display}));
-		if (data.div == "-rep-display") localStorage.setItem(`${data.currency}-rep-display`, JSON.stringify({address:data.address, name:data.display}));
+		if (data.div === "") localStorage.setItem(`${data.currency}-display`, JSON.stringify({address:data.address, name:data.display}));
+		if (data.div == "-rep") localStorage.setItem(`${data.currency}-rep-display`, JSON.stringify({address:data.address, name:data.display}));
 		displayName(data.currency, data.div, data.address, data.display);
 	});
 	
@@ -1266,8 +1267,8 @@ function setName(symbol) {
 function fetchDisplayName(symbol, divString, address, skipCache) {
 	if (ccc[symbol].checkAddress(address)) {
 		let displayString = nameCache[address];
-		if (!displayString && (divString == "-display" || divString == "-rep-display")) {
-			let myDisplay = localStorage.getItem(symbol + divString);
+		if (!displayString && (divString == "" || divString == "-rep")) {
+			let myDisplay = localStorage.getItem(symbol + divString + "-display");
 			if (myDisplay) myDisplay = JSON.parse(myDisplay);
 			if (myDisplay && myDisplay.address == address) displayString = myDisplay.name;
 		}
@@ -1276,22 +1277,29 @@ function fetchDisplayName(symbol, divString, address, skipCache) {
 		if ((!displayString || skipCache) && !ws.emit("getNameCue", {div: divString, address: address, currency: symbol})) {
 			setTimeout(function() {ws.emit("getNameCue", {div: divString, address: address, currency: symbol})}, 1000);
 		}
-	} else D(symbol + divString).textContent = "";
+	} else D(symbol + divString + "-display").textContent = "";
 }
 
 function displayName(symbol, divString, address, displayString) {
+	let div = D(symbol + divString + "-display");
+	if (!div) return false;
+	if (divString == "") {
+		if (ccc[symbol].address != address) return false;
+	} else if (D(symbol + divString)) {
+		let checkAddress = D(symbol + divString).value;
+		if (!checkAddress) checkAddress = D(symbol + divString).textContent;
+		if (address != checkAddress) return false;
+	}
 	if (!displayString) displayString = backupCache[address];
 	if (!displayString) {
-		if (divString == "-display") {
+		if (divString == "") {
 			if (ccc[symbol].index === 0 || ccc[symbol].index > 0) displayString = "✏️ My Account #" + ccc[symbol].index;
 			else displayString = "✏️ My Account";
 		} else if (address == ccc[symbol].address) displayString = "(me)";
 		else displayString = "Unknown";
-	} else if (divString != "-display" && address == ccc[symbol].address) displayString += " (me)";
-	if (D(symbol + divString)) {
-		flash(D(symbol + divString), displayString);
-		if (D(symbol + "-transactions").contains(D(symbol + divString))) checkli(D(symbol + divString).parentNode.parentNode.parentNode, D(symbol + "-filter").value.toLowerCase(), symbol);
-	}
+	} else if (divString != "" && address == ccc[symbol].address) displayString += " (me)";
+	flash(div, displayString);
+	if (D(symbol + "-transactions").contains(div)) checkli(div.parentNode.parentNode.parentNode, D(symbol + "-filter").value.toLowerCase(), symbol);
 }
 
 //////////////////////////////////////////////////////// Interface with helper functions
@@ -1334,7 +1342,7 @@ function importWallet(symbol) {
 function hardRefresh(symbol) {
 	if (!symbol) symbol = D('primary').value;
 	if (ccc[symbol].address) {
-		fetchDisplayName(symbol, "-display", ccc[symbol].address, true);
+		fetchDisplayName(symbol, "", ccc[symbol].address, true);
 		refreshBalance(symbol);
 		ccc[symbol].getTransactions();
 	}
@@ -1539,6 +1547,7 @@ function verifySignature(symbol) {
 
 function refreshBalance(symbol) {
 	return ccc[symbol].getAccountInfo().then(function(accountInfo) {
+		if (!ccc[symbol].address) return false;
 		if (accountInfo) {
 			if (ccc[symbol].address == localStorage.getItem(`${symbol}-address`)) localStorage.setItem(`${symbol}-info`, JSON.stringify(accountInfo));	
 			if (D('msg').textContent.indexOf('Unable to connect to network.') != -1) showMsg(`Connected.`);
@@ -1550,7 +1559,7 @@ function refreshBalance(symbol) {
 		if (accountInfo) {
 			if (!paymentWindow && accountInfo.representative && D(`${symbol}-rep`) && D(`${symbol}-rep`).textContent != accountInfo.representative) {
 				flash(D(`${symbol}-rep`), accountInfo.representative);	
-				fetchDisplayName(symbol, "-rep-display", accountInfo.representative, true);
+				fetchDisplayName(symbol, "-rep", accountInfo.representative, true);
 			}
 			if (accountInfo.balance !== undefined) flash(D(`${symbol}-balance`), unitFromRaw(symbol, accountInfo.balance));
 			if (accountInfo.pending !== undefined) flash(D(`${symbol}-balance-pending`), unitFromRaw(symbol, accountInfo.pending));
@@ -2044,10 +2053,10 @@ function addressQR(symbol) {
 function generateQR(symbol, input) {	
 	if (ccc[symbol].checkSeed(input)) {
 		flash(D(symbol + '-type-display'), ccc[symbol].keyType);	
-		fetchDisplayName(symbol, '-directory-display', ccc[symbol].addressFromSeed(input, true), true);
+		fetchDisplayName(symbol, '-directory', ccc[symbol].addressFromSeed(input, true), true);
 	} else if (ccc[symbol].checkAddress(input)) {
 		flash(D(symbol + '-type-display'), 'public address');
-		fetchDisplayName(symbol, '-directory-display', input, true);
+		fetchDisplayName(symbol, '-directory', input, true);
 	} else {
 		D(symbol + '-type-display').textContent = '';
 		D(symbol + '-directory-display').textContent = '';
@@ -2344,7 +2353,7 @@ function generateHTML(symbol) {
 	ccc[symbol].sidebarElt.appendChild(loginDiv);
 	loginDiv.innerHTML = `<div class="objectWrapper">
 		<div class="clickFlash" style="display:flex; justify-content:space-between" 
-								onclick="toggleEdit('${symbol}'); fetchDisplayName('${symbol}', '-display', ccc['${symbol}'].address, true)">
+								onclick="toggleEdit('${symbol}'); fetchDisplayName('${symbol}', '', ccc['${symbol}'].address, true)">
 			<strong style="overflow:hidden"><div id="${symbol}-display" style="text-overflow:ellipsis; overflow:hidden; font-size:1.2em;" class="flash">✏️ My Account</div></strong>
 		</div>
 		
@@ -2407,7 +2416,7 @@ function generateHTML(symbol) {
 	
 	makeTool("Transfer", 'dest-display', "", 20, 
 		`<div style="display:flex; justify-content:space-between; margin-top:10px;">
-			<input placeholder="Destination address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-dest-display', this.value, true); D('${symbol}-paymentButton').disabled = true;">
+			<input placeholder="Destination address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-dest', this.value, true); D('${symbol}-paymentButton').disabled = true;">
 			<button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 			<button tabindex="-1" id="${symbol}-qrButton2" style="font-size:0.85em" onclick="qrscan('${symbol}', '-dest', this)">QR</button>
 		</div>		
@@ -2477,7 +2486,7 @@ function generateHTML(symbol) {
 		
 	makeTool("Validate", 'signer-display', 'verify', 0, 
 		`<div style="display:flex; margin-top:5px;">
-			<input id="${symbol}-signer" placeholder="Signee address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" type="text" maxlength="128" onclick="this.select()" oninput="verifySignature('${symbol}'); fetchDisplayName('${symbol}', '-signer-display', this.value, true);">
+			<input id="${symbol}-signer" placeholder="Signee address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" type="text" maxlength="128" onclick="this.select()" oninput="verifySignature('${symbol}'); fetchDisplayName('${symbol}', '-signer', this.value, true);">
 			<button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 		</div>		
 		<div id="${symbol}-contract-verify" style="font-size:0.9em; margin-top:10px; margin-right:10px;" class="textbox" onkeyup="if (this.textContent.length == 0) this.innerHTML = ''; verifySignature('${symbol}');" placeholder="Contract..." contenteditable="true"></div>
@@ -2499,7 +2508,7 @@ function generateHTML(symbol) {
 			<span class="flash rightData" id="${symbol}-new-rep-display"></span>	
 		</div>
 		<div style="display:flex; justify-content:space-between; margin-top:10px;">
-			<input placeholder="New representative address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-new-rep" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-new-rep-display', this.value, true)" onkeyup="if (event.keyCode == 13) setRep('${symbol}', this)"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+			<input placeholder="New representative address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-new-rep" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-new-rep', this.value, true)" onkeyup="if (event.keyCode == 13) setRep('${symbol}', this)"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 			<button style="font-size:0.85em" onclick="suggestRep('${symbol}')">Suggest</button>
 		</div>
 		<div style="text-align:center;"><button style="margin-top:15px" onclick="setRep('${symbol}', this)">Set Representative</button></div>`);
