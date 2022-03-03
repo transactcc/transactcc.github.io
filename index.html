@@ -584,6 +584,32 @@ ccc['BAN'].getPending = function() {return post(ccc['BAN'].server, {action: 'pen
 
 //////////////////////////////////////////////////////// transaction helper functions
 
+ccc['XNO'].sign = function(message) { return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc['XNO'].privateKey))); }
+ccc['BAN'].sign = function(message) { return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc['BAN'].privateKey))); }
+ccc['XLM'].sign = function(message) { return byteArrayToHex(StellarSdk.Keypair.fromSecret(ccc['XLM'].privateKey).sign(enc.encode(message))); }
+ccc['ALGO'].sign = function(message) { return byteArrayToHex(algosdk.signBytes(enc.encode(message), ccc['ALGO'].privateKey)); }
+ccc['SOL'].sign = function(message) { return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc['SOL'].privateKey))); }
+
+
+ccc['XNO'].verify = function(message, signature, address) {
+	try { return verifyDetached(enc.encode(message), hexToByteArray(signature), hexToByteArray(ccc['XNO'].derivePublicKey(address))); }
+	catch { return false };
+}
+ccc['BAN'].verify = function(message, signature, address) {
+	try { return verifyDetached(enc.encode(message), hexToByteArray(signature), hexToByteArray(ccc['BAN'].derivePublicKey(address))); }
+	catch { return false };
+}
+ccc['XLM'].verify = function(message, signature, address) {
+	let byteArr = hexToByteArray(signature);
+	byteArr.toJSON = function() { return { type: 'Buffer', data: Array.prototype.slice.call(this._arr || this, 0) }; }
+	try { return StellarSdk.Keypair.fromPublicKey(address).verify(enc.encode(message), byteArr); }
+	catch { return false };
+}
+ccc['ALGO'].verify = function(message, signature, address) {
+	try { return algosdk.verifyBytes(enc.encode(message), hexToByteArray(signature), address); }
+	catch { return false };
+}
+
 ccc['BAN'].sendTo = function(destination, amt) { return enqueue('BAN', function() {return nanoSend('BAN', destination, amt);}); };
 ccc['XNO'].sendTo = function(destination, amt) { return enqueue('XNO', function() {return nanoSend('XNO', destination, amt);}); };
 ccc['SOL'].sendTo = function(destination, amt) { 
@@ -660,51 +686,6 @@ ccc['ALGO'].sendTo = function(destination, amt) {
 		}).catch(function() { return networkFailMsg(); });
 	});
 };
-
-
-
-ccc['XNO'].sign = function(message) {
-	let symbol = 'XNO';	
-	return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc[symbol].privateKey)));
-}
-ccc['BAN'].sign = function(message) {
-	let symbol = 'BAN';	
-	return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc[symbol].privateKey)));
-}
-ccc['XLM'].sign = function(message) {
-	let symbol = 'XLM';	
-	return byteArrayToHex(StellarSdk.Keypair.fromSecret(ccc[symbol].privateKey).sign(enc.encode(message)));
-}
-ccc['ALGO'].sign = function(message) {
-	let symbol = 'ALGO';	
-	return byteArrayToHex(algosdk.signBytes(enc.encode(message), ccc[symbol].privateKey));
-}
-ccc['SOL'].sign = function(message) {
-	let symbol = 'SOL';	
-	return byteArrayToHex(signDetached(enc.encode(message), hexToByteArray(ccc[symbol].privateKey)));
-}
-
-
-ccc['XNO'].verify = function(message, signature, address) {
-	try { return verifyDetached(enc.encode(message), hexToByteArray(signature), hexToByteArray(ccc['XNO'].derivePublicKey(address))); }
-	catch { return false };
-}
-ccc['BAN'].verify = function(message, signature, address) {
-	try { return verifyDetached(enc.encode(message), hexToByteArray(signature), hexToByteArray(ccc['BAN'].derivePublicKey(address))); }
-	catch { return false };
-}
-ccc['XLM'].verify = function(message, signature, address) {
-	let byteArr = hexToByteArray(signature);
-	byteArr.toJSON = function() {
-		return { type: 'Buffer', data: Array.prototype.slice.call(this._arr || this, 0) };
-	}
-	try { return StellarSdk.Keypair.fromPublicKey(address).verify(enc.encode(message), byteArr); }
-	catch { return false };
-}
-ccc['ALGO'].verify = function(message, signature, address) {
-	try { return algosdk.verifyBytes(enc.encode(message), hexToByteArray(signature), address); }
-	catch { return false };
-}
 
 
 ccc['BAN'].getBlock = function(hash) { return post(ccc['BAN'].server, {action: 'block_info', json_block: true, hash: hash}); };
@@ -1030,7 +1011,6 @@ function setupWebsocket() {
 		displayName(data.currency, data.div, data.address, data.display);
 	});
 	
-	
 	ws.on('getReceiptReplyCue', function(data) {
 		if (D(data.div)) {
 			let receipt = [];
@@ -1090,7 +1070,6 @@ function setupWebsocket() {
 	});
 }
 
-
 //////////////////////////////////////////////////////// Final display setup
 
 function makePaymentURL(preferred, addresses, items) {
@@ -1142,14 +1121,12 @@ function loadPaymentsPage(data) {
 	
 	selectPrimary(symbol).then(function() {	
 		clearPayment(symbol);
-		openSubAccordion(D(symbol + "-dest").parentNode.parentNode.parentNode);
+		openSubAccordion(D(symbol + "-dest").parentNode.parentNode.parentNode);		
+		inputEvent(D(symbol + "-dest"), data.addresses[symbol]);
 		
-		D(symbol + "-dest").value = data.addresses[symbol];
 		D(symbol + "-dest").disabled = true;
 		D(symbol + "-dest").nextElementSibling.style.display = "none";
 		D(symbol + "-dest").nextElementSibling.nextElementSibling.style.display = "none";
-		flash(D(symbol + "-dest"));
-		fetchDisplayName(symbol, '-dest-display', D(symbol + "-dest").value, true);
 		
 		for (let i = 0; i < data.items.length; i++) {
 			if (data.items[i].item || data.items[i][symbol]) {			
@@ -1321,8 +1298,7 @@ function displayName(symbol, divString, address, displayString) {
 	
 function generateWallet(symbol) {
 	if (!ccc[symbol].address || confirm('Overwrite the current ' + ccc[symbol].keyType + '?')) {
-		inputEvent(D(`${symbol}-seed`), ccc[symbol].generateSeed());	
-		flash(D(`${symbol}-seed`));
+		inputEvent(D(`${symbol}-seed`), ccc[symbol].generateSeed());
 		navigator.clipboard.writeText(D(`${symbol}-seed`).value);
 		clipboardText = D(`${symbol}-seed`).value;
 		showMsg("New " + ccc[symbol].keyType + " copied to clipboard. Save it securely, elsewhere and now!");
@@ -1697,9 +1673,7 @@ function suggestRep(symbol) {
 				if (!repAddr) repAddr = data[0].address;
 				if (repAddr) {
 					ccc[symbol].representative = repAddr;
-					D(`${symbol}-new-rep`).value = repAddr;
-					flash(D(`${symbol}-new-rep`));
-					fetchDisplayName(symbol, '-new-rep-display', repAddr, true);
+					inputEvent(D(`${symbol}-new-rep`), repAddr);
 				}
 			}
 		});
@@ -1860,10 +1834,8 @@ function addItem(elt) {
 function donate() {
 	let symbol = D('primary').value;
 	D(symbol + "-dest").parentNode.scrollIntoView({block:"center", behavior:"auto"});
-	D(symbol + "-dest").value = ccc[symbol].donation;
+	inputEvent(D(symbol + "-dest"), ccc[symbol].donation);
 	openSubAccordion(D(symbol + "-dest").parentNode.parentNode.parentNode);
-	flash(D(symbol + "-dest"));
-	fetchDisplayName(symbol, '-dest-display', D(symbol + "-dest").value, true);
 }
 
 function toggleWipe() {
@@ -2065,7 +2037,6 @@ function qrscan(symbol, type, elt) {
 function addressQR(symbol) {
 	if (ccc[symbol].address) {
 		inputEvent(D(symbol + '-qr-input'), ccc[symbol].address);
-		flash(D(symbol + '-qr-input'));
 		ccc[symbol].qrCode.makeCode(ccc[symbol].address);
 	}
 }
@@ -2073,7 +2044,7 @@ function addressQR(symbol) {
 function generateQR(symbol, input) {	
 	if (ccc[symbol].checkSeed(input)) {
 		flash(D(symbol + '-type-display'), ccc[symbol].keyType);	
-		fetchDisplayName(symbol, '-directory-display', ccc[symbol].addressFromSeed(input, true));
+		fetchDisplayName(symbol, '-directory-display', ccc[symbol].addressFromSeed(input, true), true);
 	} else if (ccc[symbol].checkAddress(input)) {
 		flash(D(symbol + '-type-display'), 'public address');
 		fetchDisplayName(symbol, '-directory-display', input, true);
@@ -2191,6 +2162,7 @@ function addOrdered(li, element) {
 function inputEvent(obj, value) {
 	obj.value = value;
 	obj.dispatchEvent(new Event('input', {bubbles:true}));
+	if (value) flash(obj);
 }
 
 function byteArrayToHex(byteArray) {
@@ -2435,7 +2407,7 @@ function generateHTML(symbol) {
 	
 	makeTool("Transfer", 'dest-display', "", 20, 
 		`<div style="display:flex; justify-content:space-between; margin-top:10px;">
-			<input placeholder="Destination address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-dest-display', this.value); D('${symbol}-paymentButton').disabled = true;">
+			<input placeholder="Destination address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-dest-display', this.value, true); D('${symbol}-paymentButton').disabled = true;">
 			<button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 			<button tabindex="-1" id="${symbol}-qrButton2" style="font-size:0.85em" onclick="qrscan('${symbol}', '-dest', this)">QR</button>
 		</div>		
@@ -2495,7 +2467,7 @@ function generateHTML(symbol) {
 			<a style="font-size:0.9em;" class="clickFlash" rel="noopener" target="_blank" href="https://warashibetrader.github.io/2022/02/17/invoices">Advanced Integrations</a>
 		</div>`);
 	
-	makeTool("Sign contract", "", 'sign', 0, 	
+	makeTool("Sign", "", 'sign', 0, 	
 		`<div id="${symbol}-contract" style="font-size:0.9em; margin-top:5px; margin-right:10px;" class="textbox" onkeyup="if (this.textContent.length == 0) this.innerHTML = ''; makeSignature('${symbol}')" placeholder="Contract..." contenteditable="true">Now if I carry out this oath, and break it not, may I gain for ever reputation among all men for my life and for my art; but if I break it and forswear myself, may the opposite befall me.</div>	
 
 		<div style="margin-top:10px">
@@ -2503,9 +2475,9 @@ function generateHTML(symbol) {
 			<div id="${symbol}-signature" class='address' style="max-width:min-content; overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)"></div>
 		</div>`);
 		
-	makeTool("Validate contract", 'signer-display', 'verify', 0, 
+	makeTool("Validate", 'signer-display', 'verify', 0, 
 		`<div style="display:flex; margin-top:5px;">
-			<input id="${symbol}-signer" placeholder="Signee address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" type="text" maxlength="128" onclick="this.select()" oninput="verifySignature('${symbol}'); fetchDisplayName('${symbol}', '-signer-display', this.value);">
+			<input id="${symbol}-signer" placeholder="Signee address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" type="text" maxlength="128" onclick="this.select()" oninput="verifySignature('${symbol}'); fetchDisplayName('${symbol}', '-signer-display', this.value, true);">
 			<button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 		</div>		
 		<div id="${symbol}-contract-verify" style="font-size:0.9em; margin-top:10px; margin-right:10px;" class="textbox" onkeyup="if (this.textContent.length == 0) this.innerHTML = ''; verifySignature('${symbol}');" placeholder="Contract..." contenteditable="true"></div>
@@ -2515,7 +2487,7 @@ function generateHTML(symbol) {
 		</div>	
 		
 		<div class="leftRightBase">				
-			<strong>Validity</strong>
+			<strong>Validation</strong>
 			<span id="${symbol}-signature-conclude" class="flash rightData">Unconfirmed</span>
 		</div>`);
 	
@@ -2527,7 +2499,7 @@ function generateHTML(symbol) {
 			<span class="flash rightData" id="${symbol}-new-rep-display"></span>	
 		</div>
 		<div style="display:flex; justify-content:space-between; margin-top:10px;">
-			<input placeholder="New representative address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-new-rep" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-new-rep-display', this.value)" onkeyup="if (event.keyCode == 13) setRep('${symbol}', this)"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+			<input placeholder="New representative address..." onfocus="scrollPanel(this)" style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-new-rep" type="text" maxlength="128" onclick="this.select()" oninput="fetchDisplayName('${symbol}', '-new-rep-display', this.value, true)" onkeyup="if (event.keyCode == 13) setRep('${symbol}', this)"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 			<button style="font-size:0.85em" onclick="suggestRep('${symbol}')">Suggest</button>
 		</div>
 		<div style="text-align:center;"><button style="margin-top:15px" onclick="setRep('${symbol}', this)">Set Representative</button></div>`);
