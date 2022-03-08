@@ -585,6 +585,7 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
 		if (!ws.emit('getReceiptCue', {currency:symbol, tx: tx, div: displayNameSpan.id, address:address })) showMsg("Unable to connect to directory.");
 	}
 	
+	li.lastChild.previousElementSibling.lastChild.title = tx;
 	li.title = number;	
 	addOrdered(li, D(symbol + '-transactions'));
 	if (ccc[symbol].checkAddress(address)) fetchDisplayName(symbol, number, true);
@@ -1135,7 +1136,7 @@ function setupWebsocket(restart) {
 			
 			if (receipt.length > 0) {
 				let buttonli = make('li');
-				buttonli.style = "font-size:0.85em; text-align: center; margin-top:5px;";
+				buttonli.style = "font-size:0.85em; text-align: center; margin-top:10px;";
 				
 				let transferButton = make('button');
 				transferButton.textContent = "Populate Transfer";
@@ -2138,9 +2139,10 @@ function checkli(li, item, symbol) {
 	let restricted = D(symbol + "-invoice-filter").classList.contains('active');
 	if (restricted && li.children[1].children[1].textContent + 's' != D(symbol + "-invoice-filter").textContent) li.style.display = "none";
 	else {
+		let txid = li.lastChild.previousElementSibling.lastChild.title.toLowerCase();
 		let displayName = li.children[0].children[0].textContent.toLowerCase();
 		let address = li.children[1].children[0].children[0].textContent.toLowerCase();
-		if (displayName.indexOf(item) != -1 || address.indexOf(item) != -1) li.style.display = "";
+		if (displayName.indexOf(item) != -1 || address.indexOf(item) != -1 || txid.indexOf(item) != -1) li.style.display = "";
 		else li.style.display = "none";
 	}
 }
