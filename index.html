@@ -1078,7 +1078,7 @@ function setupWebsocket(restart) {
 			}
 			
 			let li = make('li');
-			li.style = "overflow:hidden; text-overflow:ellipsis; padding-left:3px; margin-left:10px; white-space:nowrap; text-align:center";
+			li.style = "overflow:hidden; text-overflow:ellipsis; padding-left:3px; margin-left:10px; margin-bottom:10px; white-space:nowrap; text-align:center";
 				
 			let labelSpan = make('span');
 			labelSpan.textContent = "Network ID:";
@@ -1731,7 +1731,7 @@ function makeSignature(symbol) {
 function verifySignature(symbol) {
 	if (D(symbol + "-signer")) {
 		if (ccc[symbol].verify(D(symbol + "-contract-verify").textContent, D(symbol + "-signature-verify").value, D(symbol + "-signer").value)) {
-			flash(D(symbol + "-signature-conclude"), "Confirmed");
+			flash(D(symbol + "-signature-conclude"), "confirmed");
 			D(symbol + "-signature-conclude").style.color = "#097";
 		} else {
 			D(symbol + "-signature-conclude").textContent = "\xa0\xa0-\xa0\xa0";
