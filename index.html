@@ -446,6 +446,7 @@ ccc['SOL'].getTransactions = function(start) {
 				let change;
 				let actualAddress;				
 				for (let j = 0; j < history[i].transaction.message.accountKeys.length; j++) {
+					console.log(history[i].transaction.message.accountKeys[j]);
 					if (history[i].transaction.message.accountKeys[j].pubkey.toBase58() == ccc[symbol].address) {
 						change = history[i].meta.postBalances[j] - history[i].meta.preBalances[j];
 						if (history[i].transaction.message.accountKeys[j].signer) change = -change;
