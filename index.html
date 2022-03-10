@@ -446,12 +446,13 @@ ccc['SOL'].getTransactions = function(start) {
 				let change;
 				let actualAddress;				
 				for (let j = 0; j < history[i].transaction.message.accountKeys.length; j++) {
-					console.log(history[i].transaction.message.accountKeys[j]);
-					if (history[i].transaction.message.accountKeys[j].pubkey.toBase58() == ccc[symbol].address) {
+					let publicKey = history[i].transaction.message.accountKeys[j].pubkey;
+					if (publicKey.toBase58) publicKey = publicKey.toBase58();
+					if (publicKey == ccc[symbol].address) {
 						change = history[i].meta.postBalances[j] - history[i].meta.preBalances[j];
 						if (history[i].transaction.message.accountKeys[j].signer) change = -change;
 						else send = false;
-					} else if (j < 2) actualAddress = history[i].transaction.message.accountKeys[j].pubkey.toBase58();
+					} else if (j < 2) actualAddress = publicKey;
 				}
 				displayTransaction(symbol, history[i].slot, send, actualAddress, history[i].blockTime * 1000, change, history[i].signature);	
 			}
