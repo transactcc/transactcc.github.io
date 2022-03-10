@@ -438,19 +438,20 @@ ccc['SOL'].getTransactions = function(start) {
 		});	
 	}	
 	return fetchTxData().then(function(history) {
-	if (D(symbol + '-loadMore') && history) {
+	if (D(symbol + '-loadMore') && history && history.length > 0) {
 		handlePage(symbol, history.length > 9, history[history.length - 1].slot, history[history.length - 1].signature);
 		for (let i = 0; i < history.length; i++) {			
 			if (!D(symbol + '-' + history[i].slot)) {
 				let send = true;
 				let change;
-				let actualAddress;				
-				for (let j = 0; j < history[i].transaction.message.accountKeys.length; j++) {
-					let publicKey = history[i].transaction.message.accountKeys[j].pubkey;
+				let actualAddress;
+				let txKeyList = history[i].transaction.message.accountKeys;
+				for (let j = 0; j < txKeyList.length; j++) {
+					let publicKey = txKeyList[j].pubkey;
 					if (publicKey.toBase58) publicKey = publicKey.toBase58();
 					if (publicKey == ccc[symbol].address) {
 						change = history[i].meta.postBalances[j] - history[i].meta.preBalances[j];
-						if (history[i].transaction.message.accountKeys[j].signer) change = -change;
+						if (txKeyList[j].signer) change = -change;
 						else send = false;
 					} else if (j < 2) actualAddress = publicKey;
 				}
