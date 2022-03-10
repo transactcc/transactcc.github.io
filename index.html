@@ -507,14 +507,8 @@ function handlePage(symbol, condition, lastNumber, restart) {
 		
 function displayTransaction(symbol, number, send, address, time, amt, tx) {	
 	let li = make('li');			
-
 	li.style.borderRadius = "5px";
 	li.style.marginTop = "15px";
-	let displayNameSpan = make('span');
-	displayNameSpan.id = `${symbol}-${number}-display`;
-	displayNameSpan.style.borderRadius = '5px';
-	displayNameSpan.textContent = "Unknown";
-	if (ccc[symbol].checkAddress(address)) displayNameSpan.onclick = function() { fetchDisplayName(symbol, number);	};
 	
 	let memoType = "Invoice";
 	let color = "#097";	
@@ -524,26 +518,32 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
 		color = "#333";
 		signSymbol = "-";
 	}
+	
+	let firstRow = make('div');
+	firstRow.classList.add('clickFlash');
+	firstRow.style = "display:flex; justify-content:space-between";
+	firstRow.innerHTML = "<strong style='margin-right:10px; overflow:hidden; text-overflow: ellipsis'></strong>"
+	+ "<strong style='text-align:right; overflow:hidden; text-overflow:ellipsis; color:" + color + "'>" + signSymbol + "<span class='clickFlash'></span> " + symbol + "</strong>";
+	
+	let displayNameSpan = make('span');
+	displayNameSpan.id = symbol + '-' + number + '-display';
+	displayNameSpan.style.borderRadius = '5px';
+	displayNameSpan.textContent = "Unknown";
+	if (ccc[symbol].checkAddress(address)) displayNameSpan.onclick = function() { fetchDisplayName(symbol, number);	};
+	firstRow.children[0].appendChild(displayNameSpan);
+	firstRow.children[1].children[0].textContent = unitFromRaw(symbol, amt);
+	firstRow.onclick = function() {	if (!ws.emit('getReceiptCue', {currency:symbol, tx: tx, div: displayNameSpan.id, address:address })) showMsg("Unable to connect to directory."); }
+	firstRow.children[1].children[0].onclick = function() { event.stopPropagation(); clickCopy(this, this.textContent); };	
 
-	li.innerHTML = "<div class='clickFlash' style='display:flex; justify-content:space-between'><strong style='margin-right:10px; overflow:hidden; text-overflow: ellipsis'></strong>"
-	+ "<strong style='text-align:right; overflow:hidden; text-overflow:ellipsis; color:" + color + "'>" + signSymbol + "<span class='clickFlash'></span> " + symbol + "</strong></div>"
-	+ "<div style='display:flex; justify-content:space-between; align-items:center;'><div style='overflow:hidden; margin-left:10px'><div class='address' onclick='clickCopy(this, this.textContent)'></div>"
-	+ "<div style='font-size:0.85em; padding-left:3px;'></div></div><button style='font-size:0.85em; margin-left:10px; color:" + color + "'>" + memoType + "</button></div>" 
-	+ "<ul class='accordion' style='margin-top:10px; padding-left:0px; list-style: none;'></ul>";
+	let secondRow = make('div');
+	secondRow.style = "display:flex; justify-content:space-between; align-items:center; margin-left:10px; margin-right:5px";
+	secondRow.innerHTML = "<div style='overflow:hidden; margin-right:10px'><div class='address' onclick='clickCopy(this, this.textContent)'></div><div style='font-size:0.85em; padding-left:3px;'></div></div>"
+	+ "<button style='font-size:0.85em; color:" + color + "'>" + memoType + "</button>";
 	
-	li.children[0].children[0].appendChild(displayNameSpan);
-	li.children[0].children[1].children[0].textContent = unitFromRaw(symbol, amt);
-	li.children[0].children[1].children[0].onclick = function() { 
-		event.stopPropagation();
-		clickCopy(this, this.textContent); 
-	};
+	secondRow.children[0].children[0].textContent = address;
+	secondRow.children[0].children[0].id = symbol + '-' + number;
 	
-	let bottomRow = li.children[1].children[0].children[0];
-	bottomRow.textContent = address;
-	bottomRow.id = symbol + '-' + number;
-	
-	let d = new Date(time);
-  //  let d = new Date(timestamp * 1000), // Convert the passed timestamp to milliseconds
+	let d = new Date(time);  //  let d = new Date(timestamp * 1000), // Convert the passed timestamp to milliseconds
 	let yyyy = d.getFullYear(),
 	mm = d.getMonth() + 1,  // Months are zero based. Add leading 0.
 	dd = d.getDate(),         // Add leading 0.
@@ -561,16 +561,20 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
     } else if (hh == 0) h = 12;
 
     // ie: 2014-03-24, 3:00 PM
-    bottomRow.nextSibling.textContent = h + ':' + min + '\xa0' + ampm + ' ' + mm + '/' + dd + '/' + yyyy + ": #" + number;
-	
-	li.lastChild.previousElementSibling.lastChild.onclick = function() {
-		if (!ws.emit('getReceiptCue', {currency:symbol, tx: tx, div: displayNameSpan.id, address:address })) showMsg("Unable to connect to directory.");
-	}
-	li.firstChild.onclick = function() {
+    secondRow.children[0].children[1].textContent = h + ':' + min + '\xa0' + ampm + ' ' + mm + '/' + dd + '/' + yyyy + ", #" + number;
+	secondRow.lastChild.onclick = function() {
 		if (!ws.emit('getReceiptCue', {currency:symbol, tx: tx, div: displayNameSpan.id, address:address })) showMsg("Unable to connect to directory.");
 	}
 	
-	li.lastChild.previousElementSibling.lastChild.title = tx;
+	let ul = make('ul');
+	ul.classList.add('accordion');
+	ul.style = "padding-left:0px; list-style: none; max-height:0px";
+	
+	li.appendChild(firstRow);
+	li.appendChild(secondRow);
+	li.appendChild(ul);
+	
+	secondRow.lastChild.title = tx;
 	li.title = number;	
 	addOrdered(li, D(symbol + '-transactions'));
 	if (ccc[symbol].checkAddress(address)) fetchDisplayName(symbol, number, true);
@@ -1022,7 +1026,7 @@ function setupWebsocket(restart) {
 			} else if (data.rEnvelope) {
 				type = "Public";
 				rEnvelope = JSON.parse(data.rEnvelope);
-			} else type = "none"; 
+			}
 			
 			if (data.rEnvelope) {			
 				if (!sender && ccc[data.currency].verify(data.rEnvelope + data.tx, data.rSig, data.address)) receiptString = type + " receipt signed by other party";
@@ -1033,12 +1037,9 @@ function setupWebsocket(restart) {
 				}
 			} else receiptString = "No invoice/receipt found";
 			
-			but.classList.add('active');
-			ul.style.maxHeight = "0px";
-			
 			but.onclick = function() {
 				if (ul.style.maxHeight != "0px") {
-					ul.style.maxHeight = "0px";
+					hideAccordion(ul);
 					but.classList.remove('active');
 				} else {
 					showAccordion(ul);
@@ -1055,6 +1056,60 @@ function setupWebsocket(restart) {
 					but.classList.add('active');
 				}
 			};
+			
+			let li = make('li');
+			li.style = "overflow:hidden; text-overflow:ellipsis; margin:10px; padding-left:3px; white-space:nowrap; text-align:center";
+				
+			let labelSpan = make('span');
+			labelSpan.textContent = "Transaction ID:";
+			labelSpan.style = "font-size: 0.85em; margin-right:5px";
+			
+			let idSpan = make('span');
+			idSpan.textContent = data.tx;			
+			idSpan.classList.add('address');
+			idSpan.onclick = function() { clickCopy(idSpan, idSpan.textContent); };
+
+			let detailSpan = make('div');
+			detailSpan.textContent = receiptString;
+			detailSpan.style = "font-size: 0.85em;";
+			if (error) detailSpan.style.color = "red";
+					
+			let invoiceSpan = make('a');
+			invoiceSpan.style = "font-size: 0.85em;";		
+			let invoiceLabelSpan = make('span');
+			invoiceLabelSpan.style = "font-size: 0.85em;";	
+			
+			if (rEnvelope.invoice) {
+				let addresses = {};
+				if (sender) addresses[data.currency] = data.address;
+				else addresses[data.currency] = ccc[data.currency].address;
+				
+				invoiceSpan.textContent = "Invoice";
+				invoiceSpan.href = makePaymentURL(data.currency, addresses, rEnvelope.invoice, rEnvelope.iSig);
+				invoiceSpan.target = "_blank";
+				invoiceSpan.rel='noopener';			
+				
+				if (ccc[data.currency].verify(JSON.stringify(rEnvelope.invoice), rEnvelope.iSig, addresses[data.currency])) {
+					if (!sender) invoiceLabelSpan.textContent = " drafted and signed by me";
+					else invoiceLabelSpan.textContent = " drafted and signed by other party";
+				} else {				
+					if (!sender) invoiceLabelSpan.textContent = " drafted by me (unsigned)";
+					else invoiceLabelSpan.textContent = " drafted by other party (unsigned)";
+				}
+			} else if (data.rEnvelope) {
+				if (!sender) invoiceLabelSpan.textContent = "No invoice (transfer initiated by other party)";
+				else invoiceLabelSpan.textContent = "No invoice (transfer initiated by me)";
+			}
+			
+			li.appendChild(invoiceSpan);
+			li.appendChild(invoiceLabelSpan);
+			
+			li.appendChild(detailSpan);
+			
+			li.appendChild(labelSpan);
+			li.appendChild(idSpan);	
+			
+			ul.appendChild(li);
 			
 			if (rEnvelope.receipt) {
 				for (let i = 0; i < rEnvelope.receipt.length; i++) {
@@ -1075,71 +1130,24 @@ function setupWebsocket(restart) {
 					li.appendChild(amtSpan);
 					ul.appendChild(li);
 				}
-			}
-			
-			let li = make('li');
-			li.style = "overflow:hidden; text-overflow:ellipsis; padding-left:3px; margin-left:10px; margin-bottom:10px; white-space:nowrap; text-align:center";
 				
-			let labelSpan = make('span');
-			labelSpan.textContent = "Network ID:";
-			labelSpan.style = "font-size: 0.85em; margin-right:5px";
-			
-			let idSpan = make('span');
-			idSpan.textContent = data.tx;			
-			idSpan.classList.add('address');
-			idSpan.onclick = function() { clickCopy(idSpan, idSpan.textContent); };
-
-			let detailSpan = make('div');
-			detailSpan.textContent = receiptString;
-			detailSpan.style = "font-size: 0.85em; padding-right:3px";
-			if (error) detailSpan.style.color = "red";
-			
-			let invoiceLabelSpan = make('span');
-			invoiceLabelSpan.style = "font-size: 0.85em; margin-right:5px";
-			
-			let invoiceSpan = make('a');
-			if (rEnvelope.invoice) {
-				let addresses = {};
-				if (sender) addresses[data.currency] = data.address;
-				else addresses[data.currency] = ccc[data.currency].address;
-				invoiceSpan.textContent = makePaymentURL(data.currency, addresses, rEnvelope.invoice, rEnvelope.iSig);
-				invoiceSpan.href = invoiceSpan.textContent;
-				invoiceSpan.target = "_blank";
-				invoiceSpan.rel='noopener';
-				invoiceSpan.classList.add('address');	
-
-				li.appendChild(invoiceLabelSpan);
-				li.appendChild(invoiceSpan);				
-				
-				if (ccc[data.currency].verify(JSON.stringify(rEnvelope.invoice), rEnvelope.iSig, addresses[data.currency])) {
-					if (!sender) invoiceLabelSpan.textContent = "Invoice signed by me:";
-					else invoiceLabelSpan.textContent = "Invoice signed by other party:";
-				} else invoiceLabelSpan.textContent = "Unsigned invoice:";
-			}
-			
-			li.appendChild(detailSpan);
-			li.appendChild(labelSpan);
-			li.appendChild(idSpan);	
-			
-			if (rEnvelope.receipt && rEnvelope.receipt.length > 0) {
 				let buttonli = make('li');
 				buttonli.style = "font-size:0.85em; text-align: center; margin-top:10px; margin-bottom:10px;";
 				
 				let transferButton = make('button');
-				transferButton.textContent = "Populate Transfer";
+				transferButton.textContent = "Autofill Transfer";
 				transferButton.style.marginRight = "3px";
 				transferButton.onclick = function() { populateItems(data.currency, data.address, rEnvelope.receipt, "itemize"); };
 				buttonli.appendChild(transferButton);
 				
 				let invoiceButton = make('button');
-				invoiceButton.textContent = "Populate Invoice";
+				invoiceButton.textContent = "Autofill Invoice";
 				invoiceButton.onclick = function() { populateItems(data.currency, data.address, rEnvelope.receipt, "invoice"); };
 				buttonli.appendChild(invoiceButton);
 				ul.appendChild(buttonli);
 			}
 			
-			ul.appendChild(li);
-			
+			but.classList.add('active');
 			showAccordion(ul);
 		}
 	});
@@ -1643,7 +1651,7 @@ function prepareTotalTab(symbol, elt) {
 		if (ccc[symbol].verify(JSON.stringify(paymentWindow.invoice), paymentWindow.iSig, D(symbol + "-dest").value)) {
 			D(symbol + "-dest-sig").textContent = "signed";
 			D(symbol + "-dest-sig").style.color = "#097";
-		} else D(symbol + "-dest-sig").textContent = "none";
+		} else D(symbol + "-dest-sig").textContent = "unsigned";
 	}
 	
 	let privacyString = "public (<a class='clickFlash' rel='noopener' target='_blank' href='https://warashibetrader.github.io/2022/03/05/end-to-end'>?</a>)";
@@ -2684,13 +2692,13 @@ function generateHTML(symbol) {
 		</div>
 		
 		<div class="leftRightBase" style="margin-right:0px;">				
-			<strong style="margin-right:5px;">Unsigned invoice link</strong>	
+			<strong style="margin-right:5px;">Unsigned invoice</strong>	
 			<a id="${symbol}-invoice-url" class="flash" target="_blank" href=""><button style="font-size:0.85em">Link Demo</button></a>
 		</div>		
 		<div id="${symbol}-invoice-url-literal" class='address' onclick="clickCopy(this, this.textContent)">&nbsp;</div>
 		
 		<div class="leftRightBase" style="margin-right:0px;">				
-			<strong style="margin-right:5px;">Signed invoice link</strong>	
+			<strong style="margin-right:5px;">Signed invoice</strong>	
 			<a id="${symbol}-invoice-url-signed" class="flash" target="_blank" href=""><button style="font-size:0.85em">Link Demo</button></a>
 		</div>		
 		<div id="${symbol}-invoice-url-literal-signed" class='address' onclick="clickCopy(this, this.textContent)">&nbsp;</div>
