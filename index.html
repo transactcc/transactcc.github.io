@@ -603,7 +603,7 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
     } else if (hh == 0) h = 12;
 
     // ie: 2014-03-24, 3:00 PM
-    secondRow.children[0].children[1].children[0].textContent = h + ':' + min + '\xa0' + ampm + ' ' + mm + '/' + dd + '/' + yyyy + ", #" + number + ", ID:";
+    secondRow.children[0].children[1].children[0].textContent = h + ':' + min + '\xa0' + ampm + ' ' + mm + '/' + dd + '/' + yyyy + " #" + number + ", ID:";
     secondRow.children[0].children[1].children[1].textContent = tx;			
 	secondRow.lastChild.onclick = function() {
 		if (!ws.emit('getReceiptCue', {currency:symbol, tx: tx, div: displayNameSpan.id, address:address })) showMsg("Unable to connect to directory.");
@@ -1161,7 +1161,7 @@ function setupWebsocket(restart) {
 				}
 				
 				let buttonli = make('li');
-				buttonli.style = "font-size:0.85em; text-align: center; margin-top:10px; margin-bottom:10px;";
+				buttonli.style = "font-size:0.85em; text-align: center; margin-top:10px; margin-bottom:20px;";
 				
 				let transferButton = make('button');
 				transferButton.textContent = "Autofill Transfer";
@@ -1684,7 +1684,7 @@ function preparePaymentTab(symbol) {
 	if (paymentWindow) {
 		D(symbol + "-dest-sig").parentNode.style.display = "";
 		if (ccc[symbol].verify(JSON.stringify(paymentWindow.invoice), paymentWindow.iSig, D(symbol + "-dest").value)) {
-			D(symbol + "-dest-sig").textContent = "signed";
+			D(symbol + "-dest-sig").textContent = "digital signature";
 			D(symbol + "-dest-sig").style.color = "#097";
 		} else D(symbol + "-dest-sig").textContent = "unsigned";
 	}
@@ -1763,7 +1763,7 @@ function makeSignature(symbol) {
 function verifySignature(symbol) {
 	if (D(symbol + "-signer")) {
 		if (ccc[symbol].verify(D(symbol + "-contract-verify").textContent, D(symbol + "-signature-verify").value, D(symbol + "-signer").value)) {
-			flash(D(symbol + "-signature-conclude"), "validated");
+			flash(D(symbol + "-signature-conclude"), "confirmed");
 			D(symbol + "-signature-conclude").style.color = "#097";
 		} else {
 			D(symbol + "-signature-conclude").textContent = "\xa0\xa0-\xa0\xa0";
@@ -2727,7 +2727,7 @@ function generateHTML(symbol) {
 		
 		<div class="flash leftRightBase" style="margin-top:5px;"><strong>Destination</strong><span id="${symbol}-dest-display-confirm" class="rightData"></span></div>	
 		<div class="flash leftRightBase" style="display:none; margin-top:5px;"><strong>Invoice integrity</strong><span id="${symbol}-dest-sig" class="rightData"></span></div>		
-		<div class="flash leftRightBase" style="margin-top:5px;"><strong>Privacy</strong><span id="${symbol}-dest-privacy" class="rightData"></span></div>
+		<div class="flash leftRightBase" style="margin-top:5px;"><strong>Receipt privacy</strong><span id="${symbol}-dest-privacy" class="rightData"></span></div>
 		
 		<div style="text-align:center; margin-top:15px;">
 			<button id="${symbol}-paymentButton" onclick="withdraw('${symbol}', this)" disabled>Transfer ${symbol}</button>
@@ -2761,7 +2761,7 @@ function generateHTML(symbol) {
 		<div id="${symbol}-invoice-url-literal-signed" class='address' onclick="clickCopy(this, this.textContent)">&nbsp;</div>
 		
 		<div style="text-align:center; margin-top:15px;">			
-			<a style="font-size:0.9em;" class="clickFlash" rel="noopener" target="_blank" href="https://warashibetrader.github.io/2022/02/17/invoices">More Payment Integrations</a>
+			<a style="font-size:0.9em;" class="clickFlash" rel="noopener" target="_blank" href="https://warashibetrader.github.io/2022/02/17/invoices">Automated Integrations</a>
 		</div>
 	</div>`;
 	
