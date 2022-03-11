@@ -578,7 +578,7 @@ function displayTransaction(symbol, number, send, address, time, amt, tx) {
 	firstRow.children[1].children[0].onclick = function() { event.stopPropagation(); clickCopy(this, this.textContent); };	
 
 	let secondRow = make('div');
-	secondRow.style = "display:flex; justify-content:space-between; align-items:center; margin-left:10px; margin-right:5px";
+	secondRow.style = "display:flex; justify-content:space-between; align-items:center; margin-left:5px; margin-right:5px";
 	secondRow.innerHTML = "<div style='overflow:hidden; margin-right:10px; white-space:nowrap'><div class='address' onclick='clickCopy(this, this.textContent)'></div><div style='display:flex;'><div style='font-size:0.85em; padding-left:3px; display:inline-block'></div><div class='address' style='max-width:50px; display:inline-block; margin-top:0px' onclick='clickCopy(this, this.textContent)'></div></div></div>"
 	+ "<button style='font-size:0.85em; color:" + color + "'>" + memoType + "</button>";
 	
@@ -1246,7 +1246,7 @@ function populateItems(symbol, address, items, type) {
 	let elt = D(symbol + "-" + type);
 	elt.scrollIntoView({block:"center", behavior:"auto"});
 	if (type == "itemize") clearPayment(symbol);
-	else clearMemoList(symbol, "-invoice");
+	else clearInvoice(symbol);
 	openSubAccordion(elt.parentNode.parentNode);
 	if (type == "itemize") inputEvent(D(symbol + "-dest"), address);
 	
@@ -1502,10 +1502,8 @@ function refreshData(symbol) {
 function loadDisplay(symbol, keepAccount) {
 	hardRefresh(symbol);	
 	D('donateButton').disabled = false;
-	if (!paymentWindow) {
-		makeInvoiceLink(symbol);
-		makeSignature(symbol);
-	} else {
+	if (!paymentWindow) makeSignature(symbol);
+	else {
 		D(symbol + "-tool2").style.display = "none";
 		D(symbol + "-tool3").style.display = "none";
 		D(symbol + "-tool4").style.display = "none";
@@ -1518,9 +1516,14 @@ function loadDisplay(symbol, keepAccount) {
 function clearPayment(symbol) {
 	flash(D(`${symbol}-dest-display`), "");
 	D(symbol + "-dest").value = "";	
-	D(`${symbol}-withdrawal-amount`).value = "";	
-	clearPaymentSummary(symbol);
+	D(`${symbol}-withdrawal-amount`).value = "";
+	clearPaymentTab(symbol);
 	clearMemoList(symbol, "-itemize");
+}
+
+function clearInvoice(symbol) {
+	clearInvoiceTab(symbol);
+	clearMemoList(symbol, "-invoice");
 }
 
 function clearMemoList(symbol, div) {
@@ -1531,12 +1534,21 @@ function clearMemoList(symbol, div) {
 	D(symbol + div).lastElementChild.children[0].value = "";
 }
 
-function clearPaymentSummary(symbol) {
+function clearInvoiceTab(symbol) {
+	D(symbol + '-invoice-url').href = "";
+	D(symbol + '-invoice-url-signed').href = "";
+	flash(D(symbol + '-invoice-url-literal'), "\xa0");
+	flash(D(symbol + '-invoice-url-literal-signed'), "\xa0");	
+	hideAccordion(D(symbol + "-tool4").nextElementSibling);
+	hideAccordionPadding(D(symbol + "-tool4").nextElementSibling);
+}
+
+function clearPaymentTab(symbol) {
 	D(symbol + '-withdrawal-amount-total').value = '';
 	D(symbol + '-dest-display-confirm').textContent = '';
 	D(symbol + '-dest-privacy').textContent = '';
-	hideAccordion(D(symbol + '-withdrawal-amount-total').parentNode.parentNode);
-	hideAccordionPadding(D(symbol + '-withdrawal-amount-total').parentNode.parentNode);
+	hideAccordion(D(symbol + "-payTool").nextElementSibling);
+	hideAccordionPadding(D(symbol + "-payTool").nextElementSibling);
 }
 
 function freezePayment(symbol, finalize) {
@@ -1587,9 +1599,6 @@ function clickClearWallet(symbol) {
 	
 	// transfer tool
 	if (!paymentWindow) clearPayment(symbol);
-	
-	// invoice tool
-	clearMemoList(symbol, "-invoice");
 	
 	// signature tool
 	flash(D(`${symbol}-contract`), "Now if I carry out this oath, and break it not, may I gain for ever reputation among all men for my life and for my art; but if I break it and forswear myself, may the opposite befall me.");
@@ -1643,10 +1652,7 @@ function clearWallet(symbol) {
 	flash(D(`${symbol}-balance-pending`), "0.00");
 	
 	// invoice tool
-	D(symbol + '-invoice-url').href = "";
-	D(symbol + '-invoice-url-signed').href = "";
-	flash(D(symbol + '-invoice-url-literal'), "\xa0");
-	flash(D(symbol + '-invoice-url-literal-signed'), "\xa0");
+	clearInvoice(symbol);
 	
 	// signature tool
 	flash(D(symbol + '-signature'), "\xa0");
@@ -1660,7 +1666,7 @@ function clearWallet(symbol) {
 }
 
 
-function prepareTotalTab(symbol, elt) {
+function preparePaymentTab(symbol) {
 	addTotal(D(symbol + "-itemize"));
 	
 	if (D(symbol + "-withdrawal-amount").value)
@@ -1699,6 +1705,28 @@ function prepareTotalTab(symbol, elt) {
 	D(symbol + "-payTool").nextElementSibling.style.padding = "";
 }
 
+function prepareInvoiceTab(symbol) {
+	addTotal(D(symbol + "-invoice"));
+	
+	let addresses = {};
+	addresses[symbol] = ccc[symbol].address;
+	let theURL = makePaymentURL(symbol, addresses, packageItems(symbol, "invoice"));
+	D(symbol + '-invoice-url').href = theURL;
+	flash(D(symbol + '-invoice-url-literal'), theURL);
+	
+	let items = packageItems(symbol, "invoice");
+	theURL = makePaymentURL(symbol, addresses, items, ccc[symbol].sign(JSON.stringify(items)));
+	D(symbol + '-invoice-url-signed').href = theURL;
+	flash(D(symbol + '-invoice-url-literal-signed'), theURL);
+	D(symbol + '-invoice-url').style.opacity = "";
+	D(symbol + '-invoice-url-signed').style.opacity = "";
+	D(symbol + '-invoice-url-literal').style.opacity = "";
+	D(symbol + '-invoice-url-literal-signed').style.opacity = "";
+	
+	showAccordion(D(symbol + "-tool4").nextElementSibling);	
+	D(symbol + "-tool4").nextElementSibling.style.padding = "";
+}
+
 function packageItems(symbol, type) {
 	let elt = D(symbol + "-" + type);
 	let items = [];
@@ -1712,39 +1740,6 @@ function packageItems(symbol, type) {
 		}
 	}
 	return items;
-}
-
-var invoiceWaiter;
-function makeInvoiceLink(symbol) {
-	if (!invoiceWaiter) {
-		if (D(symbol + "-invoice")) {
-			let addresses = {};
-			addresses[symbol] = ccc[symbol].address;
-			let theURL = makePaymentURL(symbol, addresses, packageItems(symbol, "invoice"));
-			D(symbol + '-invoice-url').href = theURL;
-			flash(D(symbol + '-invoice-url-literal'), theURL);
-			
-			let items = packageItems(symbol, "invoice");
-			theURL = makePaymentURL(symbol, addresses, items, ccc[symbol].sign(JSON.stringify(items)));
-			D(symbol + '-invoice-url-signed').href = theURL;
-			flash(D(symbol + '-invoice-url-literal-signed'), theURL);
-			D(symbol + '-invoice-url').style.opacity = "";
-			D(symbol + '-invoice-url-signed').style.opacity = "";
-			D(symbol + '-invoice-url-literal').style.opacity = "";
-			D(symbol + '-invoice-url-literal-signed').style.opacity = "";
-			invoiceWaiter = setTimeout(function() {	invoiceWaiter = ""; }, 500);
-		}
-	} else {
-		clearTimeout(invoiceWaiter);
-		D(symbol + '-invoice-url').style.opacity = "0.3";
-		D(symbol + '-invoice-url-signed').style.opacity = "0.3";
-		D(symbol + '-invoice-url-literal').style.opacity = "0.3";
-		D(symbol + '-invoice-url-literal-signed').style.opacity = "0.3";
-		invoiceWaiter = setTimeout(function() {
-			invoiceWaiter = ""; 
-			makeInvoiceLink(symbol);
-		}, 500);
-	}
 }
 
 var signatureWaiter;
@@ -1982,7 +1977,8 @@ function toggleSubAccordion(but) {
 	} else {
 		if (obj.style.maxHeight != "0px") showAccordion(obj);
 		setTimeout(function() { hideAccordion(obj); }, 1);
-		if (D(D('primary').value + '-payTool').contains(but)) clearPaymentSummary(D('primary').value);
+		if (D(D('primary').value + '-payTool').contains(but)) clearPaymentTab(D('primary').value);
+		if (D(D('primary').value + '-tool4').contains(but)) clearInvoiceTab(D('primary').value);
 	}
 }
 
@@ -2046,7 +2042,7 @@ function toggleInvoices(elt, symbol) {
 function addTotal(elt) {
 	let symbol = D('primary').value;
 	if (elt == D(symbol + "-itemize")) D(symbol + "-paymentButton").disabled = true;
-	else makeInvoiceLink(symbol);
+	else shadeInvoice(symbol);
 	let totalDiv = elt.nextElementSibling.lastElementChild;
 	let total = BigInt(rawFromUnit(symbol, 0));
 	for (let i = 0; i < elt.children.length; i++) {
@@ -2061,13 +2057,32 @@ function addTotal(elt) {
 	else totalDiv.value = "";
 }
 
+function descInputHandler(event, elt) {
+	if (D(D('primary').value + "-invoice").contains(elt)) shadeInvoice(D('primary').value);
+	if (event.keyCode == 27) elt.value = '';
+	
+	if (event.keyCode == 13) {
+		let symbol = D('primary').value;
+		if (D(symbol + "-invoice").contains(elt)) prepareInvoiceTab(symbol);
+		else preparePaymentTab(symbol);
+	} 
+}
+
 function amtInputHandler(event, elt) {
 	if (event.keyCode == 27) elt.value = '';
 	if (event.keyCode == 13) {
+		let symbol = D('primary').value;
+		if (D(symbol + "-invoice").contains(elt)) prepareInvoiceTab(symbol);
+		else preparePaymentTab(symbol);
+	} else addTotal(elt.parentNode.parentNode); 
+}
+
+function amtKeyuphandler(event, elt) {
+	if (!event.shiftKey && event.keyCode == 9) {
+		event.preventDefault();
 		if (elt.parentNode == elt.parentNode.parentNode.lastElementChild) addItem(elt.parentNode.parentNode);
 		else elt.parentNode.nextElementSibling.children[0].focus();
 	}
-	addTotal(elt.parentNode.parentNode); 
 }
 
 function prepTwoDigit(elt) {
@@ -2083,15 +2098,24 @@ function addItem(elt) {
 		};
 	}
 	
-	let urlString = "";
-	let symbol = D('primary').value;
-	if (D(symbol + "-invoice").contains(elt)) urlString = "makeInvoiceLink('" + symbol + "');";
 	let outerElt = make('div');
 	outerElt.style = "display:flex; justify-content:space-between; margin-top:15px; align-items:baseline";
-	outerElt.innerHTML = '<input placeholder="Description..." onfocus="scrollPanel(this)" onkeyup="if (event.keyCode == 27) this.value = ' + "''; " + urlString + '" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128"><input placeholder="0.00" onblur="prepTwoDigit(this)" onkeyup="amtInputHandler(event, this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0"><button tabindex="-1" style="font-size:0.85em" onclick="addItem(this.parentNode.parentNode)">&#65291;</button>';
+	
+	outerElt.innerHTML = '<input onkeyup="descInputHandler(event, this)" placeholder="Description..." onfocus="scrollPanel(this)" style="flex-grow:2; flex-basis:1px; margin-right:10px" type="text" maxlength="128">';
+	
+	outerElt.innerHTML += '<input onkeyup="amtInputHandler(event, this)" onkeydown="amtKeyuphandler(event, this)" placeholder="0.00" onblur="prepTwoDigit(this)" style="margin-right:10px; text-align:right; flex-grow:1; flex-basis:1px; overflow:hidden; text-overflow:ellipsis;" type="number" step="0.01" min="0">'
+	
+	outerElt.innerHTML += '<button tabindex="-1" style="font-size:0.85em" onclick="addItem(this.parentNode.parentNode)">&#65291;</button>';
 
 	elt.appendChild(outerElt);
 	outerElt.children[0].focus();
+}
+
+function shadeInvoice(symbol) {
+	D(symbol + '-invoice-url').style.opacity = "0.3";
+	D(symbol + '-invoice-url-signed').style.opacity = "0.3";
+	D(symbol + '-invoice-url-literal').style.opacity = "0.3";
+	D(symbol + '-invoice-url-literal-signed').style.opacity = "0.3";
 }
 
 function donate() {
@@ -2685,7 +2709,7 @@ function generateHTML(symbol) {
 			<input id="${symbol}-withdrawal-amount" placeholder="0.00" style="text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
 		</div>
 		
-		<div style="text-align:center; margin-top:10px;"><button style="font-size:0.85em" onclick="prepareTotalTab('${symbol}', this)">Total and Summary</button></div>`);
+		<div style="text-align:center; margin-top:10px;"><button style="font-size:0.85em" onclick="preparePaymentTab('${symbol}')">Total and Summary</button></div>`);
 	
 	loginDiv.innerHTML += `<div class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">			
 		<div style="margin-left:10px;">			
@@ -2707,7 +2731,7 @@ function generateHTML(symbol) {
 		
 		<div style="text-align:center; margin-top:15px;">
 			<button id="${symbol}-paymentButton" onclick="withdraw('${symbol}', this)" disabled>Transfer ${symbol}</button>
-			<button onclick="clearPaymentSummary('${symbol}');">Cancel</button>
+			<button onclick="clearPaymentTab('${symbol}');">Cancel</button>
 		</div>
 	</div>`;
 	
@@ -2720,6 +2744,10 @@ function generateHTML(symbol) {
 			<input placeholder="0.00" style="text-align:right; flex-grow:1; flex-basis:1px" type="number" step="0.01" min="0" disabled>&nbsp;${symbol}
 		</div>
 		
+		<div style="text-align:center; margin-top:10px;"><button style="font-size:0.85em" onclick="prepareInvoiceTab('${symbol}')">Generate and Sign</button>`);
+		
+		
+	loginDiv.innerHTML += `<div class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">	
 		<div class="leftRightBase" style="margin-right:0px;">				
 			<strong style="margin-right:5px;">Unsigned invoice</strong>	
 			<a id="${symbol}-invoice-url" class="flash" target="_blank" href=""><button style="font-size:0.85em">Link Demo</button></a>
@@ -2734,7 +2762,8 @@ function generateHTML(symbol) {
 		
 		<div style="text-align:center; margin-top:15px;">			
 			<a style="font-size:0.9em;" class="clickFlash" rel="noopener" target="_blank" href="https://warashibetrader.github.io/2022/02/17/invoices">More Payment Integrations</a>
-		</div>`);
+		</div>
+	</div>`;
 	
 	makeTool("Sign", "", 'sign', 0, 	
 		`<div id="${symbol}-contract" style="font-size:0.9em; margin-top:5px; margin-right:10px;" class="textbox" onkeyup="if (this.textContent.length == 0) this.innerHTML = ''; makeSignature('${symbol}')" placeholder="Contract..." contenteditable="true">Now if I carry out this oath, and break it not, may I gain for ever reputation among all men for my life and for my art; but if I break it and forswear myself, may the opposite befall me.</div>	
