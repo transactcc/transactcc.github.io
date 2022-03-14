@@ -21,8 +21,7 @@
 	
 <body>
 	<audio id="audio"><source src="https://streams.kqed.org/kqedradio.mp3" type="audio/mpeg"/></audio>
-	<strong id="msg" style="display:none; padding:5px; z-index:4; box-shadow:#ccc 2px 2px 2px; background-color:#fff;
-							  position:fixed; left:0px; top:0px; border-radius:5px; pointer-events:none; filter:opacity(0.9);"></strong>
+	<strong id="msg" class="msg" style="display:none;"></strong>
 	<div class="containerdiv">
 	<div id="firstDiv" class="firstDiv">				
 		<div id="quoteDisplay" style="display:none; margin-bottom:15px;">
@@ -274,6 +273,7 @@ ccc['XLM'].addressFromSeed = function(seed) { return StellarSdk.Keypair.fromSecr
 ccc['ALGO'].addressFromSeed = function(seed) { return algosdk.mnemonicToSecretKey(seed).addr; };
 
 ccc['XNO'].unpackSeed = function(seed, index) {
+	ccc['XNO'].seed = seed;
 	ccc['XNO'].privateKey = ccc['XNO'].derivePrivateKey(seed, index);
 	ccc['XNO'].publicKey = ccc['XNO'].pubFromPriv(ccc['XNO'].privateKey);
 	ccc['XNO'].address = ccc['XNO'].addrFromPub(ccc['XNO'].publicKey);
@@ -281,6 +281,7 @@ ccc['XNO'].unpackSeed = function(seed, index) {
 	ccc['XNO'].encryptKey = nacl.box.keyPair.fromSecretKey(hexToByteArray(ccc['XNO'].privateKey));
 }
 ccc['BAN'].unpackSeed = function(seed, index) {
+	ccc['BAN'].seed = seed;
 	ccc['BAN'].privateKey = ccc['XNO'].derivePrivateKey(seed, index);
 	ccc['BAN'].publicKey = ccc['XNO'].pubFromPriv(ccc['BAN'].privateKey);
 	ccc['BAN'].address = ccc['XNO'].addrFromPub(ccc['BAN'].publicKey).replace('nano_', 'ban_');
@@ -292,12 +293,14 @@ ccc['SOL'].unpackSeed = function(seed) {
 	for (let i = 0; i < arrSeed.length; i++) {
 		arrSeed[i] = parseInt(arrSeed[i].replace(/\D/g,''));
 	}
+	ccc['SOL'].seed = seed;
 	ccc['SOL'].privateKey = solanaWeb3.Keypair.fromSecretKey(new Uint8Array(arrSeed));
 	ccc['SOL'].publicKey = ccc['SOL'].privateKey.publicKey;
 	ccc['SOL'].address = ccc['SOL'].publicKey.toBase58();
 	ccc['SOL'].encryptKey = nacl.box.keyPair.fromSecretKey(ccc['SOL'].privateKey.secretKey.subarray(0, 32));
 }
 ccc['XLM'].unpackSeed = function(seed) {
+	ccc['XLM'].seed = seed;
 	ccc['XLM'].privateKey = seed;
 	ccc['XLM'].publicKey = StellarSdk.Keypair.fromSecret(seed).publicKey();
 	ccc['XLM'].address = ccc['XLM'].publicKey;
@@ -305,6 +308,7 @@ ccc['XLM'].unpackSeed = function(seed) {
 }
 ccc['ALGO'].unpackSeed = function(seed) {
 	let unpack = algosdk.mnemonicToSecretKey(seed);
+	ccc['ALGO'].seed = seed;
 	ccc['ALGO'].privateKey = unpack.sk;
 	ccc['ALGO'].publicKey = unpack.addr;
 	ccc['ALGO'].address = unpack.addr;
@@ -1127,10 +1131,11 @@ function setupWebsocket(restart) {
 					
 					let itemSpan = make('span');
 					itemSpan.textContent = description;
-					itemSpan.style.marginRight = "5px";
+					itemSpan.style = "margin-right:10px; overflow:hidden; text-overflow:ellipsis";
 					
 					let amtSpan = make('span');
 					amtSpan.textContent = value;
+					amtSpan.style = "text-align:right; overflow:hidden; text-overflow:ellipsis; border-radius:5px";
 					
 					li.onmouseenter = function() { this.style.backgroundColor = ccc[data.currency].flashColor; };
 					li.onmouseleave = function() { this.style.backgroundColor = "";	};				
@@ -1145,11 +1150,15 @@ function setupWebsocket(restart) {
 				}				
 				if (rEnvelope.ship) {
 					let shipli = receiptLine("Shipping address", rEnvelope.ship);
-					shipli.style.marginTop = "5px";
+					shipli.style.marginTop = "10px";
+					shipli.children[1].style.cursor = "pointer";
+					shipli.children[1].onclick = function() { clickCopy(this, this.textContent); };	
 				}
 				if (rEnvelope.email) {
 					let emailli = receiptLine("Email address", rEnvelope.email);
-					emailli.style.marginTop = "5px";
+					if (!rEnvelope.ship) emailli.style.marginTop = "10px";
+					emailli.children[1].style.cursor = "pointer";
+					emailli.children[1].onclick = function() { clickCopy(this, this.textContent); };	
 				}
 				
 				let buttonli = make('li');
@@ -1475,7 +1484,7 @@ function displayEmail(symbol, data) {
 }
 
 //////////////////////////////////////////////////////// Interface loading and clearing
-	
+
 function generateWallet(symbol) {
 	if (!ccc[symbol].address || confirm('Overwrite the current ' + ccc[symbol].keyType + '?')) {
 		let newSeed = ccc[symbol].generateSeed();
@@ -1683,6 +1692,7 @@ function clearWallet(symbol) {
 	ccc[symbol].publicKey = "";
 	ccc[symbol].address = "";
 	ccc[symbol].index = "";
+	ccc[symbol].seed = "";
 	ccc[symbol].encryptKey = "";	
 	localStorage.removeItem(`${symbol}-seed`); 
 	localStorage.removeItem(`${symbol}-index`); 
@@ -1696,6 +1706,9 @@ function clearWallet(symbol) {
 	flash(D(`${symbol}-address`), "\xa0");	
 	flash(D(`${symbol}-balance`), "0.00");
 	flash(D(`${symbol}-balance-pending`), "0.00");
+	
+	// transfer tool
+	clearPaymentTab(symbol);
 	
 	// invoice tool
 	clearInvoiceTab(symbol);
@@ -1754,6 +1767,7 @@ function preparePaymentTab(symbol) {
 		}
 		if (paymentWindow.email) {
 			D(symbol + "-dest-email").parentNode.style.display = "";
+			if (!paymentWindow.ship) D(symbol + "-dest-email").parentNode.style.marginTop = "15px";
 			if (!localStorage.getItem(symbol + '-email') || D(symbol + "-dest-email").textContent != localStorage.getItem(symbol + '-email')) {
 				if (localStorage.getItem(symbol + '-email') && ccc[symbol].address == localStorage.getItem(`${symbol}-address`)) 
 					D(symbol + "-dest-email").textContent = localStorage.getItem(symbol + '-email');
@@ -2013,12 +2027,9 @@ function toggleVisibility(symbol) {
 	if (x.type === "password") {
 		x.type = "text";
 		D(symbol + '-show').classList.add('active');
-		if (x.value.length == 0) {
-			let seed = localStorage.getItem(`${symbol}-seed`);
-			if (seed) {
-				D(`${symbol}-seed`).value = seed;
-				D(`${symbol}-generateButton`).disabled = true;
-			}
+		if (x.value.length == 0 && ccc[symbol].seed) {
+			x.value = ccc[symbol].seed;
+			D(`${symbol}-generateButton`).disabled = true;
 		}
 	} else {
 		x.type = "password";		
@@ -2078,25 +2089,26 @@ function toggleAccount(symbol) {
 	
 	let obj = D(symbol + "-tool1");
 	if (obj.style.maxHeight == "0px") {	
-		let seed = localStorage.getItem(`${symbol}-seed`);
-		if (seed) {
-			D(`${symbol}-seed`).value = seed;
+		if (ccc[symbol].index) D(`${symbol}-index`).value = ccc[symbol].index; 
+		else D(`${symbol}-index`).value = "";
+		if (ccc[symbol].seed) {
+			D(`${symbol}-seed`).value = ccc[symbol].seed; 
 			D(`${symbol}-generateButton`).disabled = true;
-			let index = localStorage.getItem(`${symbol}-index`);
-			if (index && index != "0") D(`${symbol}-index`).value = index; 
-		}	
+		}
+		
      	showAccordion(obj);
 		obj.style.padding = "";
 		obj.style.marginTop = "5px";
 		D('account').classList.add('active');
 		setTimeout(function() { if (obj.style.maxHeight != "0px") obj.style.maxHeight = ""; }, 100);
 	} else {	
-     	showAccordion(obj);
+		D(`${symbol}-seed`).value = "";
 		qrclose();
+		
+     	showAccordion(obj);
 		setTimeout(function() {
 			hideAccordion(obj);
 			hideAccordionPadding(obj);
-			obj.value = "";
 			D('account').classList.remove('active');
 		}, 1);
 	}
@@ -2499,7 +2511,7 @@ function flash(elt, str) {
 	if (elt) {
 		if (str != undefined) elt.textContent = str;
 		elt.style.backgroundColor = ccc[D('primary').value].flashColor;	
-		setTimeout(function() {	elt.style.backgroundColor = "white";}, 500);
+		setTimeout(function() {	elt.style.backgroundColor = "";}, 500);
 	} else console.log("Element disappeared before display.");
 }
 
@@ -2671,8 +2683,9 @@ async function selectPrimary(symbol) {
 		if (ccc[symbol].address) loadDisplay(symbol);
 		else if (localStorage.getItem(`${symbol}-seed`)) {
 			D(`${symbol}-seed`).value = localStorage.getItem(`${symbol}-seed`);
+			D(`${symbol}-generateButton`).disabled = true;
 			let index = localStorage.getItem(`${symbol}-index`);
-			if (index && index != "0") D(`${symbol}-index`).value = index; 
+			if (index) D(`${symbol}-index`).value = index; 	
 			importWallet(symbol);
 		} else if (D(symbol + '-tool1') && D(symbol + '-tool1').style.maxHeight == "0px") toggleAccount(symbol);
 	}
@@ -2751,12 +2764,12 @@ function generateHTML(symbol) {
 		<div class='address' id="${symbol}-address" onclick="clickCopy(this, this.textContent)">&nbsp;</div>
 		
 		<div class="leftRightBase">
-			<strong style="flex-grow:1; margin-right:5px;">Balance</strong> 
+			<strong style="flex-grow:1; margin-right:10px;">Balance</strong> 
 			<span id="${symbol}-balance" class="clickFlash" style="overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}
 		</div>
 			
 		<div id="${symbol}-arriving-balance-panel" class="leftRightBase" style="margin-top:10px; margin-right:0px">
-			<strong style="flex-grow:1; white-space:nowrap; margin-right:5px;">Arriving funds</strong> 
+			<strong style="flex-grow:1; white-space:nowrap; margin-right:10px;">Arriving funds</strong> 
 			<span id="${symbol}-balance-pending" class="clickFlash" style="overflow:hidden; text-overflow:ellipsis;" onclick="clickCopy(this, this.textContent)">0.00</span>&nbsp;${symbol}
 			<button style="font-size:0.85em; margin-left:8px;" onclick="cyclePending('${symbol}', this)">Collect</button>
 		</div>
@@ -2854,14 +2867,14 @@ function generateHTML(symbol) {
 		
 		
 	loginDiv.innerHTML += `<div class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">	
-		<div class="leftRightBase" style="margin-right:0px;">				
-			<strong style="margin-right:5px;">Unsigned invoice</strong>	
+		<div class="leftRightBase" style="margin-right:0px; margin-top:5px">				
+			<strong style="margin-right:10px;">Unsigned invoice</strong>	
 			<a id="${symbol}-invoiceURL" class="flash" target="_blank" href=""><button style="font-size:0.85em">Link Demo</button></a>
 		</div>		
 		<div id="${symbol}-invoiceURL-literal" class='address' onclick="clickCopy(this, this.textContent)">&nbsp;</div>
 		
 		<div class="leftRightBase" style="margin-right:0px;">				
-			<strong style="margin-right:5px;">Signed invoice</strong>	
+			<strong style="margin-right:10px;">Signed invoice</strong>	
 			<a id="${symbol}-invoiceURL-signed" class="flash" target="_blank" href=""><button style="font-size:0.85em">Link Demo</button></a>
 		</div>		
 		<div id="${symbol}-invoiceURL-literal-signed" class='address' onclick="clickCopy(this, this.textContent)">&nbsp;</div>
