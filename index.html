@@ -1544,7 +1544,7 @@ function refreshData(symbol) {
 	if (!paymentWindow) transaction = ccc[symbol].getTransactions();
 	balance.then(function() {
 		transaction.then(function () {
-			D(symbol + "-transaction-refresh").disabled = false;
+			if (D(symbol + "-transaction-refresh")) D(symbol + "-transaction-refresh").disabled = false;
 			D("refresh").disabled = false;
 		});
 	});
