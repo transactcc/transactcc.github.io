@@ -59,7 +59,7 @@
 		
 		<div id="donatePanel" style="text-align:center; margin-bottom:25px; margin-top:auto; width:100%">
 			<button id="nprButton" style="font-size:0.85em" onclick="npr()">NPR</button>	
-			<a href="https://warashibetrader.github.io/2022/02/25/feature-list"><button style="font-size:0.85em">Blog</button></a>
+			<a rel='noopener' target='_blank' href="https://warashibetrader.github.io/2022/02/25/feature-list"><button style="font-size:0.85em">Blog</button></a>
 			<button id="donateButton" style="font-size:0.85em;" onclick="donate()" disabled>Support the Developer</button>
 		</div>
 	</div>
@@ -1498,11 +1498,11 @@ function displayEmail(symbol, data) {
 function generateWallet(symbol) {
 	if (!ccc[symbol].address || confirm('Overwrite the current ' + ccc[symbol].keyType + '?')) {
 		let newSeed = ccc[symbol].generateSeed();
-		ccc[symbol].address = ccc[symbol].addressFromSeed(newSeed);
+		//ccc[symbol].address = ccc[symbol].addressFromSeed(newSeed);
 		inputEvent(D(`${symbol}-seed`), newSeed);
 		navigator.clipboard.writeText(newSeed);
 		clipboardText = newSeed;
-		showMsg("New " + ccc[symbol].keyType + " copied to clipboard. Save it securely, elsewhere and now!");
+		showMsg("New " + ccc[symbol].keyType + " copied to clipboard. Store it safely, elsewhere! (Click 'Account' button to see it again.)");
 	}
 }
 
@@ -1560,6 +1560,7 @@ function loadDisplay(symbol, keepAccount) {
 	D('donateButton').disabled = false;
 	if (!paymentWindow) makeSignature(symbol);
 	else {
+		openSubAccordion(D(symbol + "-payTool"));
 		D(symbol + "-tool2").style.display = "none";
 		D(symbol + "-tool3").style.display = "none";
 		D(symbol + "-tool4").style.display = "none";
