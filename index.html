@@ -1202,11 +1202,11 @@ function makePaymentURL(preferred, addresses, items, iSig, ship, email) {
     return url;
 }
 
-function startPayment(preferred, addresses, items, processTransaction) {	
+function startPayment(preferred, addresses, items, iSig, ship, email, processTransaction) {	
 	let popup = window.open(thisURL);
 	window.addEventListener("message", function(event) { 
 		if (event.source == popup && event.data) {
-			if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred:preferred, addresses: addresses, items: items}, "*"); 
+			if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred, addresses, items, iSig, ship, email}, "*"); 
 			if (event.data.cue == "paidCue" && processTransaction) processTransaction(event.data.id);
 			if (event.data.cue == "closeCue") popup.close();
 		}
