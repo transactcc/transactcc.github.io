@@ -2885,17 +2885,17 @@ function generateHTML(symbol) {
 		
 		
 	loginDiv.innerHTML += `<div class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px;">	
-		<div class="leftRightBase" style="margin-right:0px; margin-top:5px">				
+		<div class="leftRightBase" style="margin-top:5px">				
 			<strong style="margin-right:10px;">Unsigned invoice</strong>	
-			<a id="${symbol}-invoiceURL" class="flash" target="_blank" href=""><button style="font-size:0.85em">Link Demo</button></a>
+			<a id="${symbol}-invoiceURL" class="flash" target="_blank" style="font-size:0.9em" href="">Link Demo</a>
 		</div>		
-		<div id="${symbol}-invoiceURL-literal" class='address' onclick="clickCopy(this, this.textContent)">&nbsp;</div>
+		<div id="${symbol}-invoiceURL-literal" class='address' onclick="clickCopy(this, this.textContent)" style="margin-top:10px">&nbsp;</div>
 		
-		<div class="leftRightBase" style="margin-right:0px;">				
+		<div class="leftRightBase">				
 			<strong style="margin-right:10px;">Signed invoice</strong>	
-			<a id="${symbol}-invoiceURL-signed" class="flash" target="_blank" href=""><button style="font-size:0.85em">Link Demo</button></a>
+			<a id="${symbol}-invoiceURL-signed" class="flash" target="_blank" style="font-size:0.9em" href="">Link Demo</a>
 		</div>		
-		<div id="${symbol}-invoiceURL-literal-signed" class='address' onclick="clickCopy(this, this.textContent)">&nbsp;</div>
+		<div id="${symbol}-invoiceURL-literal-signed" class='address' onclick="clickCopy(this, this.textContent)" style="margin-top:10px">&nbsp;</div>
 		
 		<div style="text-align:center; margin-top:15px;">			
 			<a style="font-size:0.9em;" class="clickFlash" rel="noopener" target="_blank" href="https://warashibetrader.github.io/2022/02/17/invoices">Automated Integrations</a>
