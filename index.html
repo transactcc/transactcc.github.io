@@ -1320,7 +1320,9 @@ window.addEventListener('beforeinstallprompt', function (evt) {  // CODELAB: Add
 	console.log("Detected that PWA can be installed.");
     deferredInstallPrompt = evt;
     evt.preventDefault();
+	D('audio').pause();
 	D('nprButton').textContent = "Native App";
+	D('nprButton').classList.remove('active');
     D('nprButton').onclick = function(event) {
 		deferredInstallPrompt.prompt();
 		
