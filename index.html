@@ -31,8 +31,8 @@
 			<input type="file" style="display:none" id="filetag" accept="image/*">		
 			<div id="advancedQuote" class="accordion" style="display:flex; position:relative; max-height:0px; align-items:center">
 				<div style="margin:auto">
-					<button id="imageButton" style="font-size:0.85em;" onclick="toggleImage()">Security Image</button>
-					<button id="wipeButton" style="font-size:0.85em;" onclick="toggleWipe()">Clear Keys on Update</button>
+					<button id="imageButton" class="left" onclick="toggleImage()">Security Image</button>
+					<button id="wipeButton" class="right" onclick="toggleWipe()">Clear Keys on Update</button>
 				</div>
 				<span style="position:absolute; right:0px">(<a rel="noopener" href="https://warashibetrader.github.io/2022/02/02/security-quote-protocol" target="_blank">?</a>)</span>
 			</div>
@@ -52,15 +52,15 @@
 				<option value="ALGO">ALGO - Algorand</option>
 			</select>	
 			<div style="position:absolute; right:0px">
-				<button id="account" style="font-size:0.85em; border-top-right-radius:5px; border-bottom-right-radius:5px;" onclick="toggleAccount()">Account</button>				
-				<button id="refresh" style="font-size:0.85em; border-top-left-radius:5px; border-bottom-left-radius:5px;" onclick="hardRefresh();">Refresh</button>
+				<button id="account" class="left" onclick="toggleAccount()">Account</button>				
+				<button id="refresh" class="right" onclick="hardRefresh();">Refresh</button>
 			</div>
 		</div>		
 		
 		<div id="donatePanel" style="text-align:center; margin-bottom:25px; margin-top:auto; width:100%">
-			<button id="nprButton" style="font-size:0.85em; border-top-right-radius:5px; border-bottom-right-radius:5px;" onclick="npr()">NPR</button>	
+			<button id="nprButton" class="left" onclick="npr()">NPR</button>	
 			<a rel='noopener' target='_blank' href="https://warashibetrader.github.io/2022/02/25/feature-list"><button style="font-size:0.85em; border-radius:5px;">Blog</button></a>
-			<button id="donateButton" style="font-size:0.85em; border-top-left-radius:5px; border-bottom-left-radius:5px;" onclick="donate()" disabled>Support the Developer</button>
+			<button id="donateButton" class="right" onclick="donate()" disabled>Support the Developer</button>
 		</div>
 	</div>
 	<div id="secondDiv" class="secondDiv">
@@ -81,36 +81,34 @@ if ('serviceWorker' in navigator) {
 		console.log('Service worker registered.', reg);
 
 		reg.addEventListener('updatefound', () => {
-			// An updated service worker has appeared in reg.installing!
+			// An updated service worker has appeared in reg.installing!			
+			if (!localStorage.getItem("quote")) return false;
 			localStorageWriteable = false;
+			showMsg("Update found. Deleting security quote...");
+			D('msg').style.backgroundColor = "#FFB6C1";	
 			
-			if (localStorage.getItem("quote")) {
-				showMsg("Update found. Deleting security quote...");
-				D('msg').style.backgroundColor = "#FFB6C1";	
-				
-				localStorage.removeItem("quote");
-				localStorage.removeItem("image");
-				if (wipeKeys) localStorage.clear();
-				D('quote').textContent = "";
-				D('preview').src = "";
-				
-				showMsg("Security quote deleted. Clearing DOM...");
-				
-				if (ccc) {
-					for (let symbol in ccc) {
-						ccc[symbol].privateKey = "";						
-						if (D(`${symbol}-seed`)) D(`${symbol}-seed`).value = "";
-						if (ccc[symbol].sidebarElt) ccc[symbol].sidebarElt.innerHTML = "";
-						console.log("Deleted " + symbol + "key.");
-					}
-				}				
-				
-				showMsg("Security quote deleted. Installing update...");
-				let newWorker = reg.installing;
-				newWorker.addEventListener('statechange', () => {		
-					if (newWorker.state == 'activated') showMsg("Security quote deleted. Update installed.");
-				});
-			}
+			localStorage.removeItem("quote");
+			localStorage.removeItem("image");
+			if (wipeKeys) localStorage.clear();
+			D('quote').textContent = "";
+			D('preview').src = "";
+			
+			showMsg("Security quote deleted. Clearing DOM...");
+			
+			if (ccc) {
+				for (let symbol in ccc) {
+					ccc[symbol].privateKey = "";						
+					if (D(`${symbol}-seed`)) D(`${symbol}-seed`).value = "";
+					if (ccc[symbol].sidebarElt) ccc[symbol].sidebarElt.innerHTML = "";
+					console.log("Deleted " + symbol + "key.");
+				}
+			}				
+			
+			showMsg("Security quote deleted. Installing update...");
+			let newWorker = reg.installing;
+			newWorker.addEventListener('statechange', () => {		
+				if (newWorker.state == 'activated') showMsg("Security quote deleted. Update installed.");
+			});
 		});
 	});
 }
@@ -256,16 +254,9 @@ ccc['SOL'].checkAddress = function(address) { return typeof address === "string"
 ccc['XLM'].checkAddress = function(address) { return StellarSdk.StrKey.isValidEd25519PublicKey(address); };
 ccc['ALGO'].checkAddress = function(address) { return algosdk.isValidAddress(address); };
 
-ccc['XNO'].addressFromSeed = function(seed) {
-	let privateKey = ccc['XNO'].derivePrivateKey(seed, 0);
-	let publicKey = ccc['XNO'].pubFromPriv(privateKey);
-	return ccc['XNO'].addrFromPub(publicKey);	
-}
+ccc['XNO'].addressFromSeed = function(seed) { return ccc['XNO'].addrFromPub(ccc['XNO'].pubFromPriv(ccc['XNO'].derivePrivateKey(seed, 0))); }
 ccc['BAN'].addressFromSeed = function(seed) { return ccc['XNO'].addressFromSeed(seed).replace('nano_', 'ban_'); };
-ccc['SOL'].addressFromSeed = function(seed) {
-	let arrSeed = stringToIntArray(seed);
-	return solanaWeb3.Keypair.fromSecretKey(new Uint8Array(arrSeed)).publicKey.toBase58();
-}
+ccc['SOL'].addressFromSeed = function(seed) { return solanaWeb3.Keypair.fromSecretKey(new Uint8Array(stringToIntArray(seed))).publicKey.toBase58(); }
 ccc['XLM'].addressFromSeed = function(seed) { return StellarSdk.Keypair.fromSecret(seed).publicKey(); };
 ccc['ALGO'].addressFromSeed = function(seed) { return algosdk.mnemonicToSecretKey(seed).addr; };
 
@@ -374,12 +365,10 @@ function nanoDisplayTransactions(symbol, start) {
 	if (D(symbol + '-loadMore') && history && history.history) {
 		handlePage(symbol, history.previous, history.history[history.history.length - 1].height, history.previous);
 		for (let i = 0; i < history.history.length; i++) {
-			if (history.history[i].subtype != "change") {
-				if (!D(symbol + '-' + history.history[i].height)) {
-					let send = (history.history[i].subtype == "send");
-					if (!send) history.history[i].hash = history.history[i].link;
-					displayTransaction(symbol, history.history[i].height, send, history.history[i].account, history.history[i].local_timestamp * 1000, history.history[i].amount, history.history[i].hash);
-				}
+			if (history.history[i].subtype != "change" && !D(symbol + '-' + history.history[i].height)) {
+				let send = (history.history[i].subtype == "send");
+				if (!send) history.history[i].hash = history.history[i].link;
+				displayTransaction(symbol, history.history[i].height, send, history.history[i].account, history.history[i].local_timestamp * 1000, history.history[i].amount, history.history[i].hash);
 			}
 		}
 	}});
@@ -510,19 +499,17 @@ ccc['ALGO'].getTransactions = function(start) {
 };
 
 function handlePage(symbol, condition, lastNumber, restart) {
-	flash(D(`${symbol}-filter`), "Transactions");		
-	if (condition) {
-		if (!D(symbol + '-' + lastNumber)) {
-			D(symbol + '-loadMore').style.display = "";
-			D(symbol + '-gettingStarted').style.display = "none";
-			D(symbol + '-loadMore').onclick = function() { 				
-				D(symbol + '-loadMore').disabled = true; 
-				ccc[symbol].getTransactions(restart).then(function() { D(symbol + '-loadMore').disabled = false; });
-			};
-		}
-	} else {
+	flash(D(`${symbol}-filter`), "Transactions");
+	if (!condition) {
 		D(symbol + '-loadMore').style.display = "none";				
 		D(symbol + '-gettingStarted').style.display = "";
+	} else if (!D(symbol + '-' + lastNumber)) {
+		D(symbol + '-loadMore').style.display = "";
+		D(symbol + '-gettingStarted').style.display = "none";
+		D(symbol + '-loadMore').onclick = function() { 				
+			D(symbol + '-loadMore').disabled = true; 
+			ccc[symbol].getTransactions(restart).then(function() { D(symbol + '-loadMore').disabled = false; });
+		};
 	}
 }
 		
@@ -723,7 +710,7 @@ ccc['ALGO'].sendTo = function(destination, amt) {
 
 ccc['BAN'].getBlock = function(hash) { return post(ccc['BAN'].server, {action: 'block_info', json_block: true, hash: hash}); };
 ccc['XNO'].getBlock = function(hash) { return post(ccc['XNO'].server, {action: 'block_info', json_block: true, hash: hash}); };
-ccc['ALGO'].getBlock = function(hash) { return fetch(ccc['ALGO'].server + "transactions/" + hash).then(function(response) { 
+ccc['ALGO'].getBlock = function(hash) { return fetch(ccc['ALGO'].server + "transactions/" + hash).then(function(response) {
 		return response.json().then(function(data) {
 			if (data.transaction) data.confirmed = "true";
 			return data;
@@ -831,7 +818,8 @@ async function nanoChange(symbol, newrep) {
 }
 
 function fetchFrontier(symbol, accountInfo) {
-	if (accountInfo && accountInfo.frontier) return post(ccc[symbol].server, {action: 'block_info', json_block: true, hash: accountInfo.frontier}).then(function(res) {
+	if (!accountInfo || !accountInfo.frontier) return false;
+	return post(ccc[symbol].server, {action: 'block_info', json_block: true, hash: accountInfo.frontier}).then(function(res) {
 		if (!res) return false;
 		let fetchedFrontierBlock = res.contents;
 
@@ -851,7 +839,6 @@ function fetchFrontier(symbol, accountInfo) {
 		fetchedFrontierBlock.hash = accountInfo.frontier;
 		return fetchedFrontierBlock;
 	});
-	else return false;
 }
 
 async function postBlock(symbol, subtype, workInput, previous, representative, balance, link) {
@@ -1012,18 +999,12 @@ function setupWebsocket(restart) {
 	});
 	
 	ws.on('setShipCompletedCue', async function(data) {
-		if (data.ship) {
-			showMsg("Shipping address set.");
-			displayShip(data.symbol, data);
-			if (D(data.symbol + "-set-ship")) flash(D(data.symbol + "-set-ship"));
-		}
+		if (data.ship) showMsg("Shipping address set.");
+		displayData('ship', data);
 	});
 	ws.on('setEmailCompletedCue', async function(data) {
-		if (data.email) {
-			showMsg("Email address set.");
-			displayEmail(data.symbol, data);
-			if (D(data.symbol + "-set-email")) flash(D(data.symbol + "-set-email"));
-		}
+		if (data.email) showMsg("Email address set.");
+		displayData('email', data);
 	});	
 	
 	ws.on('getNameReplyCue', function(data) {
@@ -1036,8 +1017,8 @@ function setupWebsocket(restart) {
 			localStorage.setItem("publicKeys", JSON.stringify(keyCache));
 		}
 		displayName(data.symbol, data.div, data.address, data.display);
-		displayShip(data.symbol, data);
-		displayEmail(data.symbol, data);
+		displayData('ship', data);
+		displayData('email', data);
 	});
 	
 	ws.on('getReceiptReplyCue', function(data) {
@@ -1192,11 +1173,10 @@ function makePaymentURL(preferred, addresses, items, iSig, ship, email) {
 function startPayment(preferred, addresses, items, iSig, ship, email, processTransaction) {	
 	let popup = window.open(thisURL);
 	window.addEventListener("message", function(event) { 
-		if (event.source == popup && event.data) {
-			if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred, addresses, items, iSig, ship, email}, "*"); 
-			if (event.data.cue == "paidCue" && processTransaction) processTransaction(event.data.id);
-			if (event.data.cue == "closeCue") popup.close();
-		}
+		if (!event.data || event.source != popup) return false;
+		if (event.data.cue == "readyCue") popup.postMessage({cue:"replyCue", preferred, addresses, items, iSig, ship, email}, "*"); 
+		if (event.data.cue == "paidCue" && processTransaction) processTransaction(event.data.id);
+		if (event.data.cue == "closeCue") popup.close();
 	});
 }
 
@@ -1259,24 +1239,16 @@ function populateItems(symbol, address, items, type) {
 
 //////////////////////////////////////////////////////// Other global eventlisteners
 
-window.addEventListener('copy', function(e) { 
+window.addEventListener('copy', copyToRAM);
+window.addEventListener('cut', copyToRAM);
+
+function copyToRAM() {
 	if (document.activeElement.tagName.toLowerCase() == 'input') clipboardText = document.activeElement.value.substring(document.activeElement.selectionStart, document.activeElement.selectionEnd);
-	else {
-		if (document.getSelection().toString()) {
-			clipboardText = document.getSelection().toString();	
-			navigator.clipboard.writeText(clipboardText);
-		}
+	else if (document.getSelection().toString()) {
+		clipboardText = document.getSelection().toString();	
+		navigator.clipboard.writeText(clipboardText);
 	}
-});
-window.addEventListener('cut', function(e) { 
-	if (document.activeElement.tagName.toLowerCase() == 'input') clipboardText = document.activeElement.value.substring(document.activeElement.selectionStart, document.activeElement.selectionEnd);
-	else {
-		if (document.getSelection().toString()) {
-			clipboardText = document.getSelection().toString();	
-			navigator.clipboard.writeText(clipboardText);
-		}
-	}
-});
+}
 
 window.addEventListener('blur', function(e) { clipboardText = ""; });
 
@@ -1298,7 +1270,6 @@ window.addEventListener('keydown', function(evt) {
 });
 
 let deferredInstallPrompt = null;
-
 // CODELAB: Add event listener for beforeinstallprompt event
 window.addEventListener('beforeinstallprompt', function (evt) {  // CODELAB: Add code to save event & show the install button.  
 	console.log("Detected that PWA can be installed.");
@@ -1324,9 +1295,7 @@ window.addEventListener('beforeinstallprompt', function (evt) {  // CODELAB: Add
 	}
 });
 
-window.addEventListener('appinstalled', function (evt) {  // CODELAB: Add code to log the event  
-    console.log('Wallet was installed.', evt);
-});
+window.addEventListener('appinstalled', function (evt) { console.log('Wallet was installed.', evt); });
 
 D('filetag').addEventListener("change", function(e) {
   if (this.files && this.files[0]) {
@@ -1377,40 +1346,44 @@ D('filetag').addEventListener("change", function(e) {
 
 //////////////////////////////////////////////////////// Interface with display database websocket
 
-function setName(symbol, name) {
-	if (!name) name = D(symbol + "-set-display").value;
-	if (name.length > 64) showMsg("64 characters or fewer.");
-	else if (!ws.emit("setNameCue", {address: ccc[symbol].address, symbol: symbol, display: name, publicKey: byteArrayToHex(ccc[symbol].encryptKey.publicKey),
-									signature: ccc[symbol].sign(name + byteArrayToHex(ccc[symbol].encryptKey.publicKey)) })) 
-		showMsg("Unable to connect to directory.");
-}
-
-function setShip(symbol, name) {
-	if (!name) name = D(symbol + "-set-ship").value;
+function setData(type, symbol, name) {	
+	if (!name) name = D(symbol + "-set-" + type).value;
 	if (name.length > 128) showMsg("128 characters or fewer.");
 	else {
-		let shipPackage = { address: ccc[symbol].address, symbol: symbol, sNonce: nacl.randomBytes(24) };
-		shipPackage.ship = byteArrayToHex(nacl.box(enc.encode(name), shipPackage.sNonce, hexToByteArray(keyCache[ccc[symbol].address]), ccc[symbol].encryptKey.secretKey));
-		shipPackage.sNonce = byteArrayToHex(shipPackage.sNonce);					
-		if (!ws.emit("setShipCue", shipPackage)) showMsg("Unable to connect to directory.");
+		let wrapPackage = {address: ccc[symbol].address, symbol: symbol};
+		if (type == "name") {
+			wrapPackage.display = name;
+			wrapPackage.publicKey = byteArrayToHex(ccc[symbol].encryptKey.publicKey);
+			wrapPackage.signature = ccc[symbol].sign(name + byteArrayToHex(ccc[symbol].encryptKey.publicKey));
+		} else if (type == "ship") {
+			wrapPackage.sNonce = nacl.randomBytes(24);
+			wrapPackage.ship = byteArrayToHex(nacl.box(enc.encode(name), wrapPackage.sNonce, ccc[symbol].encryptKey.publicKey, ccc[symbol].encryptKey.secretKey));
+			wrapPackage.sNonce = byteArrayToHex(wrapPackage.sNonce);					
+		} else {
+			wrapPackage.eNonce = nacl.randomBytes(24);
+			wrapPackage.email = byteArrayToHex(nacl.box(enc.encode(name), wrapPackage.eNonce, ccc[symbol].encryptKey.publicKey, ccc[symbol].encryptKey.secretKey));
+			wrapPackage.eNonce = byteArrayToHex(wrapPackage.eNonce);	
+		}
+		let upperType = type.toUpperCase(0)[0] + type.substr(1, type.length - 1);
+		if (!ws.emit("set" + upperType + "Cue", wrapPackage)) showMsg("Unable to connect to directory.");
 	}
 }
 
-function setEmail(symbol, name) {
-	if (!name) name = D(symbol + "-set-email").value;
-	if (name.length > 128) showMsg("128 characters or fewer.");
-	else {
-		let emailPackage = { address: ccc[symbol].address, symbol: symbol, eNonce: nacl.randomBytes(24) };
-		emailPackage.email = byteArrayToHex(nacl.box(enc.encode(name), emailPackage.eNonce, hexToByteArray(keyCache[ccc[symbol].address]), ccc[symbol].encryptKey.secretKey));
-		emailPackage.eNonce = byteArrayToHex(emailPackage.eNonce);					
-		if (!ws.emit("setEmailCue", emailPackage)) showMsg("Unable to connect to directory.");
+function displayData(type, data) {
+	let symbol = data.symbol;
+	if (data[type] && data.address == ccc[symbol].address) {
+		let theAddr = dec.decode(nacl.box.open(hexToByteArray(data[type]), hexToByteArray(data[type[0] + 'Nonce']), ccc[symbol].encryptKey.publicKey, ccc[symbol].encryptKey.secretKey));
+		if (D(symbol + "-set-" + type)) D(symbol + "-set-" + type).value = theAddr;
+		clearLocalStorage(symbol);
+		localStorage.setItem(symbol + "-" + type, theAddr);
 	}
+	if (D(data.symbol + "-set-" + type)) flash(D(data.symbol + "-set-" + type));
 }
 
 function fetchDisplayName(symbol, divString, cache) {
 	if (divString == "address") {
-		if (nameCache[ccc[symbol].address]) D(symbol + "-set-display").value = nameCache[ccc[symbol].address];
-		else D(symbol + "-set-display").value = "";
+		if (nameCache[ccc[symbol].address]) D(symbol + "-set-name").value = nameCache[ccc[symbol].address];
+		else D(symbol + "-set-name").value = "";
 		if (ccc[symbol].address == localStorage.getItem(symbol + "-address") && localStorage.getItem(symbol + "-ship")) 
 			D(symbol + "-set-ship").value = localStorage.getItem(symbol + "-ship");
 		else D(symbol + "-set-ship").value = "";
@@ -1460,36 +1433,17 @@ function displayName(symbol, divString, address, displayString) {
 	if (divString != "address" || div.textContent != displayString) flash(div, displayString);
 	if (D(symbol + "-transactions").contains(div)) checkli(div.parentNode.parentNode.parentNode, D(symbol + "-filter").value.toLowerCase(), symbol);
 }
-	
-function displayShip(symbol, data) {
-	if (data.ship && data.address == ccc[data.symbol].address) {
-		let shipAddr = dec.decode(nacl.box.open(hexToByteArray(data.ship), hexToByteArray(data.sNonce), hexToByteArray(keyCache[data.address]), ccc[symbol].encryptKey.secretKey));
-		if (D(symbol + "-set-ship")) D(symbol + "-set-ship").value = shipAddr;
-		clearLocalStorage(symbol);
-		localStorage.setItem(symbol + "-ship", shipAddr);
-	}
-}
-
-function displayEmail(symbol, data) {
-	if (data.email && data.address == ccc[data.symbol].address) {
-		let theEmailAddr = dec.decode(nacl.box.open(hexToByteArray(data.email), hexToByteArray(data.eNonce), hexToByteArray(keyCache[data.address]), ccc[symbol].encryptKey.secretKey));
-		if (D(symbol + "-set-email")) D(symbol + "-set-email").value = theEmailAddr;
-		clearLocalStorage(symbol);
-		localStorage.setItem(symbol + "-email", theEmailAddr);
-	}
-}
 
 //////////////////////////////////////////////////////// Interface loading and clearing
 
 function generateWallet(symbol) {
-	if (!ccc[symbol].address || confirm('Overwrite the current ' + ccc[symbol].keyType + '?')) {
-		let newSeed = ccc[symbol].generateSeed();
-		//ccc[symbol].address = ccc[symbol].addressFromSeed(newSeed);
-		inputEvent(D(`${symbol}-seed`), newSeed);
-		navigator.clipboard.writeText(newSeed);
-		clipboardText = newSeed;
-		showMsg("New " + ccc[symbol].keyType + " copied to clipboard. Store it safely, elsewhere! (Find it again via 'Account' button.)");
-	}
+	if (ccc[symbol].address && !confirm('Overwrite the current ' + ccc[symbol].keyType + '?')) return false;
+	let newSeed = ccc[symbol].generateSeed();
+	//ccc[symbol].address = ccc[symbol].addressFromSeed(newSeed);
+	inputEvent(D(`${symbol}-seed`), newSeed);
+	navigator.clipboard.writeText(newSeed);
+	clipboardText = newSeed;
+	showMsg("New " + ccc[symbol].keyType + " copied to clipboard. Store it safely, elsewhere! (Find it again via 'Account' button.)");
 }
 
 function importWallet(symbol) {
@@ -1648,17 +1602,16 @@ function freezePayment(symbol, finalize) {
 }
 
 function clearLocalStorage(symbol) {
-	if (ccc[symbol].address != localStorage.getItem(`${symbol}-address`)) {
-		localStorage.removeItem(`${symbol}-display`); 
-		localStorage.removeItem(`${symbol}-rep-display`); 
-		
-		localStorage.removeItem(`${symbol}-info`);
-		localStorage.removeItem(`${symbol}-transactions`);
-		localStorage.removeItem(`${symbol}-ship`);
-		localStorage.removeItem(`${symbol}-email`);
-		
-		localStorage.setItem(symbol + "-address", ccc[symbol].address);
-	}
+	if (ccc[symbol].address == localStorage.getItem(`${symbol}-address`)) return true;
+	localStorage.removeItem(`${symbol}-display`); 
+	localStorage.removeItem(`${symbol}-rep-display`); 
+	
+	localStorage.removeItem(`${symbol}-info`);
+	localStorage.removeItem(`${symbol}-transactions`);
+	localStorage.removeItem(`${symbol}-ship`);
+	localStorage.removeItem(`${symbol}-email`);
+	
+	localStorage.setItem(symbol + "-address", ccc[symbol].address);
 }
 
 function clickClearWallet(symbol) {
@@ -1775,25 +1728,19 @@ function preparePaymentTab(symbol) {
 			D(symbol + "-dest-sig").style.color = "#097";
 		} else D(symbol + "-dest-sig").textContent = "no signature";
 		
-		if (paymentWindow.ship) {
-			D(symbol + "-dest-ship").parentNode.style.display = "";
-			if (!localStorage.getItem(symbol + '-ship') || D(symbol + "-dest-ship").textContent != localStorage.getItem(symbol + '-ship')) {
-				if (localStorage.getItem(symbol + '-ship') && ccc[symbol].address == localStorage.getItem(`${symbol}-address`)) 
-					D(symbol + "-dest-ship").textContent = localStorage.getItem(symbol + '-ship');
-				else D(symbol + "-dest-ship").textContent = "(required - click account name to set)";
-				flash(D(symbol + '-dest-ship').parentNode);
+		function checkAddressReq(type) {
+			if (!paymentWindow[type]) return false;
+			D(symbol + "-dest-" + type).parentNode.style.display = "";
+			if (!paymentWindow.ship) D(symbol + "-dest-" + type).parentNode.style.marginTop = "15px";
+			if (!localStorage.getItem(symbol + '-' + type) || D(symbol + "-dest-" + type).textContent != localStorage.getItem(symbol + '-' + type)) {
+				if (localStorage.getItem(symbol + '-' + type) && ccc[symbol].address == localStorage.getItem(`${symbol}-address`)) 
+					D(symbol + "-dest-" + type).textContent = localStorage.getItem(symbol + '-' + type);
+				else D(symbol + "-dest-" + type).textContent = "(required - click account name to set)";
+				flash(D(symbol + '-dest-' + type).parentNode);
 			}
 		}
-		if (paymentWindow.email) {
-			D(symbol + "-dest-email").parentNode.style.display = "";
-			if (!paymentWindow.ship) D(symbol + "-dest-email").parentNode.style.marginTop = "15px";
-			if (!localStorage.getItem(symbol + '-email') || D(symbol + "-dest-email").textContent != localStorage.getItem(symbol + '-email')) {
-				if (localStorage.getItem(symbol + '-email') && ccc[symbol].address == localStorage.getItem(`${symbol}-address`)) 
-					D(symbol + "-dest-email").textContent = localStorage.getItem(symbol + '-email');
-				else D(symbol + "-dest-email").textContent = "(required - click account name to set)";
-				flash(D(symbol + '-dest-email').parentNode);
-			}
-		}
+		checkAddressReq("ship");
+		checkAddressReq("email");
 	}
 	
 	let privacyString = "public (<a class='clickFlash' rel='noopener' target='_blank' href='https://warashibetrader.github.io/2022/03/05/end-to-end-encryption'>?</a>)";
@@ -1857,31 +1804,28 @@ function packageItems(symbol, type) {
 
 var signatureWaiter;
 function makeSignature(symbol) {
-	if (!signatureWaiter) {
-		if (D(symbol + "-sign")) {
-			D(symbol + "-signature").textContent = ccc[symbol].sign(D(symbol + "-contract").textContent);
-			D(symbol + '-signature').style.opacity = "";
-			signatureWaiter = setTimeout(function() {	signatureWaiter = ""; }, 500);
-		}
-	} else {
+	if (signatureWaiter) {
 		clearTimeout(signatureWaiter);
 		D(symbol + '-signature').style.opacity = "0.3";
 		signatureWaiter = setTimeout(function() {
 			signatureWaiter = ""; 
 			makeSignature(symbol);
 		}, 500);
+	} else if (D(symbol + "-sign")) {
+		D(symbol + "-signature").textContent = ccc[symbol].sign(D(symbol + "-contract").textContent);
+		D(symbol + '-signature').style.opacity = "";
+		signatureWaiter = setTimeout(function() {	signatureWaiter = ""; }, 500);
 	}
 }
 
 function verifySignature(symbol) {
-	if (D(symbol + "-signer")) {
-		if (ccc[symbol].verify(D(symbol + "-contract-verify").textContent, D(symbol + "-signature-verify").value, D(symbol + "-signer").value)) {
-			flash(D(symbol + "-signature-conclude"), "confirmed");
-			D(symbol + "-signature-conclude").style.color = "#097";
-		} else {
-			D(symbol + "-signature-conclude").textContent = "\xa0\xa0-\xa0\xa0";
-			D(symbol + "-signature-conclude").style.color = "";
-		}
+	if (!D(symbol + "-signer")) return false;
+	if (ccc[symbol].verify(D(symbol + "-contract-verify").textContent, D(symbol + "-signature-verify").value, D(symbol + "-signer").value)) {
+		flash(D(symbol + "-signature-conclude"), "confirmed");
+		D(symbol + "-signature-conclude").style.color = "#097";
+	} else {
+		D(symbol + "-signature-conclude").textContent = "\xa0\xa0-\xa0\xa0";
+		D(symbol + "-signature-conclude").style.color = "";
 	}
 }
 
@@ -1897,28 +1841,27 @@ function cacheBackup(data, symbol, type) {
 }
 
 function cyclePending(symbol, elt) {
-	if (ccc[symbol].address) {
-		if (elt) {
-			showMsg(`Collecting arriving ${symbol}...`, null,true);
-			elt.disabled = true;
-		}
-		ccc[symbol].getPending().then(async function(data) {
-			if (data) {
-				let count = 0;
-				for (const block in data.blocks) {
-					await ccc[symbol].receive(block);
-					count++;
-				}
-				if (count) {
-					refreshData(symbol);
-					D(`${symbol}-balance-pending`).textContent = "0.00";
-					if (elt) showMsg("Arriving " + symbol + " collected.");	
-					if (!keyCache[ccc[symbol].address]) setName(symbol, nameCache[ccc[symbol].address]);
-				} else if (elt) showMsg("No arriving " + symbol + " found.");
+	if (!ccc[symbol].address) return false;
+	if (elt) {
+		showMsg(`Collecting arriving ${symbol}...`, null,true);
+		elt.disabled = true;
+	}
+	ccc[symbol].getPending().then(async function(data) {
+		if (data) {
+			let count = 0;
+			for (const block in data.blocks) {
+				await ccc[symbol].receive(block);
+				count++;
 			}
-			if (elt) elt.disabled = false;
-		});		
-	} 
+			if (count) {
+				refreshData(symbol);
+				D(`${symbol}-balance-pending`).textContent = "0.00";
+				if (elt) showMsg("Arriving " + symbol + " collected.");	
+				if (!keyCache[ccc[symbol].address]) setData("name", symbol, nameCache[ccc[symbol].address]);
+			} else if (elt) showMsg("No arriving " + symbol + " found.");
+		}
+		if (elt) elt.disabled = false;
+	});	
 }
 
 async function withdraw(symbol, elt) {
@@ -1948,7 +1891,7 @@ async function withdraw(symbol, elt) {
 				ws.emit("setReceiptCue", receiptPackage);
 				
 				showMsg(amt + " " + symbol + " transferred.");
-				if (!keyCache[ccc[symbol].address]) setName(symbol, nameCache[ccc[symbol].address]);
+				if (!keyCache[ccc[symbol].address]) setData("name", symbol, nameCache[ccc[symbol].address]);
 				
 				refreshData(symbol);
 				if (!paymentWindow) clearPayment(symbol);
@@ -2005,14 +1948,13 @@ async function setRep(symbol, elt) {
 function suggestRep(symbol) {
 	return fetch(ccc[symbol].repRec).then(function(response) {
 		return response.json().then(function(data) { 
-			if (data) {
-				data.sort(function(x, y) { return y.score - x.score; });
-				let repAddr = data[0].account;
-				if (!repAddr) repAddr = data[0].address;
-				if (repAddr) {
-					ccc[symbol].representative = repAddr;
-					inputEvent(D(`${symbol}-new-rep`), repAddr);
-				}
+			if (!data) return false;
+			data.sort(function(x, y) { return y.score - x.score; });
+			let repAddr = data[0].account;
+			if (!repAddr) repAddr = data[0].address;
+			if (repAddr) {
+				ccc[symbol].representative = repAddr;
+				inputEvent(D(`${symbol}-new-rep`), repAddr);
 			}
 		});
 	}).catch(function() {networkFailMsg();});
@@ -2332,98 +2274,98 @@ function checkli(li, item, symbol) {
 //////////////////////////////////////////////////////// QR helper functions
 
 function qrclose() {
-	if (qrScanning) {
-		D(qrScanningSymbol + "-qrButton1").classList.remove('active');
-		D(qrScanningSymbol + "-qrButton2").classList.remove('active');
-		
-		qrScanning.hidden = true;
-		if (qrScanningType == "-dest") qrScanning.id = qrScanningSymbol + "-qr-canvas";
-		else if (qrScanningType == "-seed") qrScanning.id = qrScanningSymbol + "-qr-canvas-seed";
-		
-		qrScanning = false;		
-		qrScanningType = "";
-		
-		video.srcObject.getTracks().forEach(track => { track.stop(); });
-	}
+	if (!qrScanning) return false;
+	D(qrScanningSymbol + "-qrButton1").classList.remove('active');
+	D(qrScanningSymbol + "-qrButton2").classList.remove('active');
+	
+	qrScanning.hidden = true;
+	if (qrScanningType == "-dest") qrScanning.id = qrScanningSymbol + "-qr-canvas";
+	else if (qrScanningType == "-seed") qrScanning.id = qrScanningSymbol + "-qr-canvas-seed";
+	
+	qrScanning = false;		
+	qrScanningType = "";
+	
+	video.srcObject.getTracks().forEach(track => { track.stop(); });
 }
 
 window.qrcode.callback = res => {
-	if (res) {
-		if (D(qrScanningSymbol + qrScanningType)) {
-			if (qrScanningType == "-dest") {
-				const nano_scheme = /^(nano):.+$/g;
-				if (ccc[qrScanningSymbol].checkAddress(res)) {
-					inputEvent(D(qrScanningSymbol + qrScanningType), res);
-					showMsg("Recipient address scanned.");
-				} else if (qrScanningSymbol == "XNO" && nano_scheme.test(res)) {
-					const url = new URL(res);
-					if (url.protocol === 'nano:' && ccc[qrScanningSymbol].checkAddress(url.pathname)) {
-						inputEvent(D(qrScanningSymbol + qrScanningType), url.pathname);
-						if (url.searchParams.get('amount')) inputEvent(D(qrScanningSymbol + "-itemize").children[0].children[1], unitFromRaw('XNO', url.searchParams.get('amount')));
-						showMsg("Bill scanned.");
-					}
-				} else showMsg("Not a valid address: " + res);
-			}
-			
-			if (qrScanningType == "-seed") {
-				if (ccc[qrScanningSymbol].checkSeed(res)) {
-					inputEvent(D(qrScanningSymbol + qrScanningType), res);
-					showMsg("Scanned a " + ccc[qrScanningSymbol].keyType + ".");
-				} else showMsg("Not a valid " + ccc[qrScanningSymbol].keyType + ": " + res);
-			}
+	if (!res) return false;
+	if (D(qrScanningSymbol + qrScanningType)) {
+		if (qrScanningType == "-dest") {
+			const nano_scheme = /^(nano):.+$/g;
+			if (ccc[qrScanningSymbol].checkAddress(res)) {
+				inputEvent(D(qrScanningSymbol + qrScanningType), res);
+				showMsg("Recipient address scanned.");
+			} else if (qrScanningSymbol == "XNO" && nano_scheme.test(res)) {
+				const url = new URL(res);
+				if (url.protocol === 'nano:' && ccc[qrScanningSymbol].checkAddress(url.pathname)) {
+					inputEvent(D(qrScanningSymbol + qrScanningType), url.pathname);
+					if (url.searchParams.get('amount')) inputEvent(D(qrScanningSymbol + "-itemize").children[0].children[1], unitFromRaw('XNO', url.searchParams.get('amount')));
+					showMsg("Bill scanned.");
+				}
+			} else showMsg("Not a valid address: " + res);
 		}
-		qrclose();
+		
+		if (qrScanningType == "-seed") {
+			if (ccc[qrScanningSymbol].checkSeed(res)) {
+				inputEvent(D(qrScanningSymbol + qrScanningType), res);
+				showMsg("Scanned a " + ccc[qrScanningSymbol].keyType + ".");
+			} else showMsg("Not a valid " + ccc[qrScanningSymbol].keyType + ": " + res);
+		}
 	}
+	qrclose();
 };
 
 function qrscan(symbol, type, elt) {
-	if (!qrScanning) {
-		elt.disabled = true;
-		navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function(stream) {
-			elt.disabled = false;
-			D(symbol + "-qrButton1").classList.add('active');
-			D(symbol + "-qrButton2").classList.add('active');
-			
-			if (type == "-dest") qrScanning = D(symbol + "-qr-canvas");
-			if (type == "-seed") qrScanning = D(symbol + "-qr-canvas-seed");
-			qrScanningType = type;
-			qrScanningSymbol = symbol;
-			
-			qrScanning.hidden = false;
-			qrScanning.id = "qr-canvas";
-			
-			video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
-			video.srcObject = stream;
-			video.play();
-			
-			const canvas = qrScanning.getContext("2d");
-			tick();
-			scan();
-			
-			if (screen.width <= 550 || screen.height <= 550) {
-				qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});
-				setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 200);
-				setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 400);
-				setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 600);
+	if (qrScanning) {
+		qrclose();
+		return true;
+	}
+	elt.disabled = true;
+	navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function(stream) {
+		elt.disabled = false;
+		D(symbol + "-qrButton1").classList.add('active');
+		D(symbol + "-qrButton2").classList.add('active');
+		
+		if (type == "-dest") qrScanning = D(symbol + "-qr-canvas");
+		if (type == "-seed") qrScanning = D(symbol + "-qr-canvas-seed");
+		qrScanningType = type;
+		qrScanningSymbol = symbol;
+		
+		qrScanning.hidden = false;
+		qrScanning.id = "qr-canvas";
+		
+		video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+		video.srcObject = stream;
+		video.play();
+		
+		const canvas = qrScanning.getContext("2d");
+		tick();
+		scan();
+		
+		if (screen.width <= 550 || screen.height <= 550) {
+			qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});
+			setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 200);
+			setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 400);
+			setTimeout(function() {qrScanning.parentNode.scrollIntoView({block:"start", behavior:"auto"});}, 600);
+		}
+		
+		function tick() {
+			if (qrScanning) {
+				qrScanning.height = video.videoHeight;
+				qrScanning.width = video.videoWidth;
+				canvas.drawImage(video, 0, 0, qrScanning.width, qrScanning.height);
+				if (qrScanning) requestAnimationFrame(tick);
 			}
-			
-			function tick() {
-				if (qrScanning) {
-					qrScanning.height = video.videoHeight;
-					qrScanning.width = video.videoWidth;
-					canvas.drawImage(video, 0, 0, qrScanning.width, qrScanning.height);
-					if (qrScanning) requestAnimationFrame(tick);
-				}
-			}
+		}
 
-			function scan() {
-				if (qrScanning) {
-					try { window.qrcode.decode();} 
-					catch (e) { setTimeout(scan, 300);}
-				}
+		function scan() {
+			if (qrScanning) {
+				try { window.qrcode.decode();} 
+				catch (e) { setTimeout(scan, 300);}
 			}
-		});
-	} else qrclose();
+		}
+	});
 }
 
 function addressQR(symbol) {
@@ -2607,7 +2549,7 @@ function post(url, params) {
 }	
  
 function npr() {
-    if (D('audio').paused) {
+    if (D('audio').paused && D('nprButton').textContent == "NPR") {
 		D('nprButton').classList.add('active');
     	D('audio').load();
     	D('audio').play();
@@ -2709,8 +2651,8 @@ function generateHTML(symbol) {
 			
 			<input id="${symbol}-filter" placeholder="Transaction filter..." style="padding-right:30px; flex-grow:1; margin-right:10px" id="${symbol}-dest" type="text" maxlength="128" onkeyup="if (event.keyCode == 27) this.value = ''; filterTransactions('${symbol}');" oninput="filterTransactions('${symbol}')"><button tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
 			
-			<button id="${symbol}-invoice-filter" style="font-size:0.85em; margin-right:5px; border-top-right-radius:5px; border-bottom-right-radius:5px;" onclick="toggleInvoices(this, '${symbol}')">Invoices</button>
-			<button id="${symbol}-transaction-refresh" style="font-size:0.85em; border-top-left-radius:5px; border-bottom-left-radius:5px;" onclick="hardRefresh('${symbol}');">Refresh</button>
+			<button id="${symbol}-invoice-filter" class="left" style="margin-right:5px;" onclick="toggleInvoices(this, '${symbol}')">Invoices</button>
+			<button id="${symbol}-transaction-refresh" class="right" onclick="hardRefresh('${symbol}');">Refresh</button>
 		</div>
 		
 		<ul id="${symbol}-transactions" style="padding-left:0px; max-width:620px; list-style: none; margin-top:25px"></ul>
@@ -2729,16 +2671,16 @@ function generateHTML(symbol) {
 	ccc[symbol].sidebarElt.innerHTML = `
 	<div id="${symbol}-tool1" class="accordion objectWrapper" style="max-height:0px; padding-top:0px; padding-bottom:0px; margin-top:0px">
 		<div style="text-align:center;">
-		<button tabindex="-1" id="${symbol}-generateButton" style="font-size:0.85em" onclick="generateWallet('${symbol}')">Generate Key</button>
-		<button id="${symbol}-current" tabindex="-1" style="font-size:0.85em" onclick="showCurrent('${symbol}')" disabled>Current Key</button>
-		<button style="font-size:0.85em" onclick="if (confirm('Clear all data for ${symbol}, including the current ' + ccc['${symbol}'].keyType + '?'))
+		<button tabindex="-1" id="${symbol}-generateButton" class="left" onclick="generateWallet('${symbol}')">Generate Key</button>
+		<button id="${symbol}-current" tabindex="-1" style="font-size:0.85em; border-radius:5px;" onclick="showCurrent('${symbol}')" disabled>Current Key</button>
+		<button class="right" onclick="if (confirm('Clear all data for ${symbol}, including the current ' + ccc['${symbol}'].keyType + '?'))
 													{ clickClearWallet('${symbol}'); showMsg('${symbol} account cleared.'); }">Clear Account</button>
 		</div>
 		<div style="display:flex; justify-content:space-between; margin-top:15px;">
 			<input onfocus="scrollPanel(this)" placeholder="Private key (store securely) ..." id="${symbol}-seed" style="padding-right:30px; flex-grow:1; flex-basis:20px; margin-right:10px;" type="password" autocomplete="off" onclick="this.select()" oninput="importWallet('${symbol}');">
 			<button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>			
-			<button id="${symbol}-show" tabindex="-1" style="font-size:0.85em; margin-right:5px;" onclick="toggleVisibility('${symbol}')">Show</button>
-			<button tabindex="-1" id="${symbol}-qrButton1" style="font-size:0.85em" onclick="qrscan('${symbol}', '-seed', this)">QR</button>
+			<button id="${symbol}-show" tabindex="-1" class="left" style="margin-right:5px;" onclick="toggleVisibility('${symbol}')">Show</button>
+			<button tabindex="-1" id="${symbol}-qrButton1" class="right" onclick="qrscan('${symbol}', '-seed', this)">QR</button>
 		</div>
 		<canvas style="width:100%; margin-top:10px;" hidden="" id="${symbol}-qr-canvas-seed"></canvas>
 		<input onfocus="scrollPanel(this)" placeholder="Account index (default 0; or 1, 2, 3, etc) ..." id="${symbol}-index" type="number" style="margin-top:15px; width:calc(100% - 10px)" min="0" maxlength="64" onclick="this.select()" oninput="importWallet('${symbol}');">
@@ -2756,17 +2698,17 @@ function generateHTML(symbol) {
 		
 		<div id="${symbol}-editpanel" class="accordion" style="margin-left:10px; max-height:0px">			
 			<div style="display:flex; justify-content:space-between;">
-				<input placeHolder="Display name (public) ..." onfocus="scrollPanel(this)" id="${symbol}-set-display" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text"autocapitalize="off" maxlength="64" onkeyup="if (event.keyCode == 13) setName('${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
-				<button style="font-size:0.85em" onclick="setName('${symbol}')">Set</button>
+				<input placeHolder="Display name (public) ..." onfocus="scrollPanel(this)" id="${symbol}-set-name" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text"autocapitalize="off" maxlength="64" onkeyup="if (event.keyCode == 13) setData('name', '${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+				<button style="font-size:0.85em" onclick="setData('name', '${symbol}')">Set</button>
 			</div>
 					
 			<div style="display:flex; justify-content:space-between; margin-top:15px;">
-				<input placeHolder="Shipping address (encrypted) ..." onfocus="scrollPanel(this)" id="${symbol}-set-ship" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text" maxlength="128" onkeyup="if (event.keyCode == 13) setShip('${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
-				<button style="font-size:0.85em" onclick="setShip('${symbol}')">Set</button>
+				<input placeHolder="Shipping address (encrypted) ..." onfocus="scrollPanel(this)" id="${symbol}-set-ship" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text" maxlength="128" onkeyup="if (event.keyCode == 13) setData('ship', '${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+				<button style="font-size:0.85em" onclick="setData('ship', '${symbol}')">Set</button>
 			</div>
 			<div style="display:flex; justify-content:space-between; margin-top:15px;">
-				<input placeHolder="Email address (encrypted) ..." onfocus="scrollPanel(this)" id="${symbol}-set-email" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text" autocapitalize="off" maxlength="128" onkeyup="if (event.keyCode == 13) setEmail('${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
-				<button style="font-size:0.85em" onclick="setEmail('${symbol}')">Set</button>
+				<input placeHolder="Email address (encrypted) ..." onfocus="scrollPanel(this)" id="${symbol}-set-email" style="padding-right:30px; flex-grow:1; margin-right:10px;" type="text" autocapitalize="off" maxlength="128" onkeyup="if (event.keyCode == 13) setData('email', '${symbol}'); if (event.keyCode == 27) this.value = '';"><button  tabindex="-1" class="close-icon" onclick="closeCopy(this.previousElementSibling)"></button>
+				<button style="font-size:0.85em" onclick="setData('email', '${symbol}')">Set</button>
 			</div>
 		</div>		
 		
@@ -2933,7 +2875,6 @@ function generateHTML(symbol) {
 		<div style="margin-top:20px; display:flex; justify-content:center" id="${symbol}-qrCodeImageBlock"></div><div style="margin-top:10px"></div>`);
 	
 }
-
 
 </script>
 </html>
